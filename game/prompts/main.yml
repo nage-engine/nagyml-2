@@ -1,0 +1,113 @@
+ask_for_name:
+  prompt:
+  - text: What should I call you?
+    mode: dialogue
+  choices:
+  - input:
+      variable: name
+    jump:
+      prompt: main
+
+main:
+  prompt:
+  - text: What brings you here, <name>?
+    mode: dialogue
+  choices:
+  - response: 
+      text: I'm just looking around.
+      mode: dialogue
+    jump:
+      prompt: looking_around
+    notes:
+      once: looked_around
+      require:
+      - name: work_to_do
+        has: false
+
+  - response:
+      text: I'm just looking around.
+    jump:
+      prompt: long_enough
+    notes:
+      require:
+      - name: looked_around
+      - name: work_to_do
+        has: false
+
+  - response: 
+      text: I have work to do.
+    jump:
+      prompt: work_to_do
+    notes:
+      once: work_to_do
+      require:
+      - name: inquiry
+        has: false
+
+  - response:
+      text: Have you faced death before?
+    jump:
+      file: combat/combat
+      prompt: main
+    lock: true
+    notes:
+      once: inquiry_finish
+      require:
+      - name: inquiry
+      - name: spared
+        has: false
+
+  - response:
+      text: I have work to do.
+    tag: SPARED
+    notes:
+      require:
+      - name: spared
+
+    ending:
+    - text: |-
+        He nods, understanding, and you help him off the floor. He will never forget your gratitude.
+        Somehow, deep down, you know that this was the correct decision.
+        THE END. <name> is SATISFIED.
+looking_around:
+  prompt:
+  - text: Ah, okay. Let me know if you need anything.
+  choices:
+  - jump:
+      prompt: main
+    display: false
+
+long_enough:
+  prompt:
+  - text: I think you've looked around long enough.
+  choices:
+  - jump:
+      prompt: work_to_do
+    display: false
+    notes:
+      apply:
+      - name: work_to_do
+
+work_to_do:
+  prompt:
+  - text: You've got work? And you came here? Why?
+  - text: I can only think of one thing...
+  - text: He reaches for his axe.
+    mode: action
+  choices:
+  - response:
+      text: Draw your sword
+      mode: action
+    jump:
+      file: combat/combat
+      prompt: main
+    lock: true
+  - response:
+      text: No, wait! I need to ask you something!
+    jump:
+      prompt: main
+    notes:
+      once: inquiry
+      apply:
+      - name: work_to_do
+        take: true
