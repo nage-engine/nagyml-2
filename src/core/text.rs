@@ -3,7 +3,7 @@ use std::fmt::Display;
 use serde::{Serialize, Deserialize};
 use snailshell::snailprint_s;
 
-use super::{choice::Variables, config::NageConfig};
+use super::{choice::Variables, manifest::Manifest};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
@@ -18,7 +18,7 @@ pub enum TextMode {
 
 impl Default for TextMode {
     fn default() -> Self {
-        TextMode::Action
+        TextMode::Dialogue
     }
 }
 
@@ -106,19 +106,19 @@ impl Text {
 	/// A templated variable that does not exist in the map will yield [`Text::DEFAULT_VARIABLE`].
 	/// 
 	/// If no templating characters or variables exist, returns the input string.
-	pub fn fill(formatted: String, variables: &Variables) -> String {
-		if !formatted.contains("<") || variables.is_empty() {
-			return formatted;
+	pub fn fill(content: String, variables: &Variables) -> String {
+		if !content.contains("<") || variables.is_empty() {
+			return content;
 		}
 		// Initialize with some capacity to avoid most allocations
-		let mut result = String::with_capacity(formatted.len());
+		let mut result = String::with_capacity(content.len());
 		let mut last_lb: Option<usize> = None;
-		for (index, c) in formatted.char_indices() {
+		for (index, c) in content.char_indices() {
 			match c {
 				'<' => last_lb = Some(index),
 				'>' => {
 					if let Some(lb) = last_lb {
-						let var = &formatted[(lb + 1)..index];
+						let var = &content[(lb + 1)..index];
 						result.push_str(variables.get(var).unwrap_or(&Text::DEFAULT_VARIABLE.to_owned()));
 						last_lb = None;
 					}
@@ -141,15 +141,15 @@ impl Text {
 	/// Formats and snailprints text based on its [`TextSpeed`]. 
 	/// 
 	/// If the text object does not contain a `speed` field, defaults to the provided config settings.
-	pub fn print(&self, variables: &Variables, config: &NageConfig) {
+	pub fn print(&self, variables: &Variables, config: &Manifest) {
 		let speed = self.speed.as_ref().unwrap_or(&config.settings.speed);
-		speed.print(self);
+		speed.print(&self.get(variables));
 	}
 
 	/// Formats lines of text and prints them sequentially.
 	/// 
 	/// Separates each formatted line with newlines. Between two text lines, if their text modes differ, uses two newlines; otherwise, uses one.
-	pub fn print_lines(lines: &TextLines, variables: &Variables, config: &NageConfig) {
+	pub fn print_lines(lines: &TextLines, variables: &Variables, config: &Manifest) {
 		for (index, line) in lines.iter().enumerate() {
 			if index > 0 && lines[index - 1].mode != line.mode {
 				println!(); // Newline
@@ -159,7 +159,7 @@ impl Text {
 	}
 
 	/// Calls [`Text::print_lines`] and prints a newline at the end.
-	pub fn print_lines_nl(lines: &TextLines, variables: &Variables, config: &NageConfig) {
+	pub fn print_lines_nl(lines: &TextLines, variables: &Variables, config: &Manifest) {
 		Self::print_lines(lines, variables, config);
 		println!();
 	}

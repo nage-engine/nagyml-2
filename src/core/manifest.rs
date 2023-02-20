@@ -72,13 +72,13 @@ pub struct Entrypoint {
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
-pub struct NageConfig {
+pub struct Manifest {
 	pub metadata: Metadata,
 	pub settings: Settings,
 	pub entry: Entrypoint
 }
 
-impl NageConfig {
+impl Manifest {
 	const FILE: &'static str = "nage.yml";
 
 	pub fn load() -> Result<Self> {

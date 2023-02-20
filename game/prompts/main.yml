@@ -1,7 +1,6 @@
 ask_for_name:
   prompt:
   - text: What should I call you?
-    mode: dialogue
   choices:
   - input:
       variable: name
@@ -11,11 +10,9 @@ ask_for_name:
 main:
   prompt:
   - text: What brings you here, <name>?
-    mode: dialogue
   choices:
   - response: 
       text: I'm just looking around.
-      mode: dialogue
     jump:
       prompt: looking_around
     notes:
@@ -69,6 +66,8 @@ main:
         He nods, understanding, and you help him off the floor. He will never forget your gratitude.
         Somehow, deep down, you know that this was the correct decision.
         THE END. <name> is SATISFIED.
+      mode: action
+
 looking_around:
   prompt:
   - text: Ah, okay. Let me know if you need anything.

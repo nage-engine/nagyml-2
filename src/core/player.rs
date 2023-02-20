@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::loading::parse;
 
-use super::{path::Path, choice::{NoteApplication, Notes, Variables, NoteActions, Choice}, config::Entrypoint};
+use super::{path::Path, choice::{NoteApplication, Notes, Variables, NoteActions, Choice}, manifest::Entrypoint};
 
 #[derive(Serialize, Deserialize, Debug)]
 /// A single variable value recording.
@@ -70,7 +70,7 @@ pub struct Player {
 	/// Whether the player has started playing the game.
 	pub began: bool,
 	/// The player's current notes.
-	notes: Notes,
+	pub notes: Notes,
 	/// The player's current variables.
 	pub variables: Variables,
 	/// Recordings of each prompt jump and their associated value changes.
@@ -142,6 +142,14 @@ impl Player {
 		let latest = self.latest_entry()?;
 		if let Some(entry) = choice.to_history_entry(&latest, &self.variables) {
 			self.history.push(entry?);
+		}
+		Ok(())
+	}
+
+	pub fn choose(&mut self, choice: &Choice) -> Result<()> {
+		self.push_history(choice)?;
+		if let Some(actions) = &choice.notes {
+			self.accept_note_actions(actions);
 		}
 		Ok(())
 	}

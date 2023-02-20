@@ -1,22 +1,28 @@
-use std::fmt::Display;
+use std::{fmt::Display, net::Shutdown};
 
 use anyhow::Result;
 
 use crate::{input::{InputController, InputResult}, core::choice::Choice};
 
-use super::{player::Player, config::NageConfig, prompt::{Prompt, Prompts}, text::{Text, TextSpeed}};
+use super::{player::Player, manifest::Manifest, prompt::{Prompt, Prompts}, text::{Text, TextSpeed}, choice::Choices};
 
 #[derive(Debug)]
 pub struct Game {
-	pub config: NageConfig,
+	pub config: Manifest,
 	pub player: Player,
 	prompts: Prompts,
 	input: InputController
 }
 
+pub enum InputLoopResult {
+	Retry,
+	Continue,
+	Shutdown(bool)
+}
+
 impl Game {
 	pub fn load() -> Result<Self> {
-		let config = NageConfig::load()?;
+		let config = Manifest::load()?;
 		let player = Player::load(&config.entry)?;
 		let prompts = Prompt::load_all()?;
 		let input = InputController::new()?;
@@ -44,41 +50,71 @@ impl Game {
 		self.player.began = true;
 	}
 
-	pub fn handle_quit(&self, shutdown: bool) {
-		if shutdown { self.shutdown() }
-		else { println!("Signal quit again or use `.quit` to exit") }
+	pub fn handle_quit(shutdown: bool) -> InputLoopResult {
+		use InputLoopResult::*;
+		if shutdown { 
+			Shutdown(false)
+		}
+		else { 
+			println!("Signal quit again or use `.quit` to exit");
+			Retry
+		}
 	}
 
-	pub fn begin(&mut self) -> Result<()> {
+	pub fn handle_choice(player: &mut Player, config: &Manifest, choice: &Choice) -> Result<InputLoopResult> {
+		use InputLoopResult::*;
+		player.choose(choice)?; println!();
+		if let Some(ending) = &choice.ending {
+			Text::print_lines(ending, &player.variables, &config);
+			return Ok(Shutdown(true));
+		}
+		Ok(Continue)
+	}
+
+	pub fn take_input(input: &mut InputController, player: &mut Player, config: &Manifest, choices: &Vec<&Choice>) -> Result<InputLoopResult> {
+		use InputLoopResult::*;
+		let result = match input.take(choices.len()) {
+			Err(err) => {
+				println!("{err}");
+				Retry
+			},
+			Ok(result) => match result {
+				InputResult::Quit(shutdown) => Self::handle_quit(shutdown),
+				InputResult::Choice(i) => Self::handle_choice(player, config, choices[i - 1])?
+			}
+		};
+		Ok(result)
+	}
+
+	pub fn begin(&mut self) -> Result<bool> {
 		if !self.player.began {
 			self.init();
 		}
-		loop {
+		let silent = 'outer: loop {
 			let entry = self.player.latest_entry()?;
 			let next_prompt = Prompt::get_from_path(&self.prompts, &entry.path)?;
 			let model = next_prompt.model();
-			next_prompt.print(model, &self.player.variables, &self.config);
+			let choices = next_prompt.usable_choices(&self.player.notes);
+			next_prompt.print(model, entry.display, &choices, &self.player.variables, &self.config);
 			
 			loop {
-				match self.input.take(next_prompt.choices.len()) {
-					Err(err) => println!("{err}"),
-					Ok(result) => match result {
-						InputResult::Quit(shutdown) => self.handle_quit(shutdown),
-						InputResult::Choice(choice) => {
-							self.player.push_history(&next_prompt.choices[choice - 1])?;
-							break;
-						}
-					}
+				// Borrow-checker coercion; only using necessary fields in static method
+				match Self::take_input(&mut self.input, &mut self.player, &self.config, &choices)? {
+					InputLoopResult::Retry => println!(),
+					InputLoopResult::Continue => break,
+					InputLoopResult::Shutdown(silent) => break 'outer silent
 				}
-				println!();
 			}
-		}
+		};
+		Ok(silent)
 	}
 
-	pub fn shutdown(&self) {
+	pub fn shutdown(&self, silent: bool) {
 		if self.config.settings.save {
 			self.player.save();
 		}
-		std::process::exit(0);
+		if !silent {
+			println!("Exiting...");
+		}
 	}
 }

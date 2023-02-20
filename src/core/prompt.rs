@@ -6,7 +6,7 @@ use walkdir::WalkDir;
 
 use crate::loading::load;
 
-use super::{text::{TextLines, Text}, choice::{Choices, Variables, Choice}, path::Path, config::NageConfig};
+use super::{text::{TextLines, Text}, choice::{Choices, Variables, Choice, Notes}, path::Path, manifest::Manifest};
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -107,13 +107,22 @@ impl Prompt {
 		Response
 	}
 
+	/// Gathers all choices that a player can use based on 
+	pub fn usable_choices(&self, notes: &Notes) -> Vec<&Choice> {
+		self.choices.iter()
+			.filter(|choice| choice.can_player_use(notes))
+			.collect()
+	}
+
 	/// Prints the prompt text, if any, and the choices display, if any are responses.
-	pub fn print(&self, model: PromptModel, variables: &Variables, config: &NageConfig) {
-		if let Some(lines) = &self.text {
-			Text::print_lines_nl(lines, variables, config);
+	pub fn print(&self, model: PromptModel, display: bool, usable_choices: &Vec<&Choice>, variables: &Variables, config: &Manifest) {
+		if display {
+			if let Some(lines) = &self.text {
+				Text::print_lines_nl(lines, variables, config);
+			}
 		}
 		if let PromptModel::Response = model {
-			println!("{}", Choice::display(&self.choices, variables));
+			println!("{}\n", Choice::display(usable_choices, variables));
 		}
 	}
 }

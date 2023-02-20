@@ -4,7 +4,7 @@ use std::{path::{PathBuf, Path}, collections::HashMap};
 
 use anyhow::Result;
 use rustyline::Editor;
-use crate::core::{player::Player, config::NageConfig};
+use crate::core::{player::Player, manifest::Manifest};
 use walkdir::WalkDir;
 
 use crate::{core::{prompt::PromptFile, text::{Text, TextMode}, game::Game}};
@@ -29,8 +29,8 @@ fn main() -> Result<()> {
 
     let mut game = Game::load()?;
     let _ = game.validate()?;
-    game.begin()?;
-    game.shutdown();
+    let silent = game.begin()?;
+    game.shutdown(silent);
 
     /*let choice = game.get_prompt(&"work_to_do".to_owned(), &"main".to_owned())?.choices[1];
     dbg!(choice);

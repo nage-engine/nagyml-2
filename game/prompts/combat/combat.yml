@@ -41,6 +41,8 @@ final_choice:
         Not wanting to be seen, you creep through the city's alleyways and make your way back home.
         You wonder, though... was this really what destiny was calling?
         THE END. <name> is HARROWED.
+      mode: action
+
 death:
   prompt:
   - text: Anticipating your next move, he swings.
@@ -54,3 +56,4 @@ death:
         As you bleed out, you wonder... what could you have done differently?
         You groan as you take your last breath. Somewhere, something is beckoning you to try again...
         THE END. <name> is DEAD.
+      mode: action

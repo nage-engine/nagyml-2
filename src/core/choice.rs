@@ -90,10 +90,48 @@ impl Choice {
 		Ok(())
 	}
 
+	/// Constructs a [`HistoryEntry`] based on this choice object. 
+	/// 
+	/// Copies over control flags, the path based on the latest history entry, and notes and variable applications.
+	pub fn to_history_entry(&self, latest: &HistoryEntry, variables: &Variables) -> Option<Result<HistoryEntry>> {
+		self.jump.as_ref().map(|jump| {
+			Ok(HistoryEntry {
+				path: jump.fill(&latest.path)?,
+				display: self.display,
+				locked: self.lock,
+				notes: self.notes.clone().map(|actions| actions.apply).flatten(),
+				variables: self.variables.clone().map(|vars| VariableEntry::from_map(&vars, variables))
+			})
+		})
+	}
+
+	/// Determines if a player can use this choice.
+	/// 
+	/// This check passes if:
+	/// - All note requirement `has` fields match the state of the provided [`Notes`] object, and
+	/// - The notes object does not contain the `once` value, if any is present
+	pub fn can_player_use(&self, notes: &Notes) -> bool {
+		if let Some(actions) = &self.notes {
+			if let Some(require) = &actions.require {
+				for requirement in require {
+					if requirement.has != notes.contains(&requirement.name) {
+						return false;
+					}
+				}
+			}
+			if let Some(once) = &actions.once {
+				if notes.contains(once) {
+					return false;
+				}
+			}
+		}
+		true
+	}
+
 	/// Constructs a [`String`] of ordered choice responses.
 	/// 
 	/// The format for each choice is `i) [tag] response`.
-	pub fn display(choices: &Choices, variables: &Variables) -> String {
+	pub fn display(choices: &Vec<&Choice>, variables: &Variables) -> String {
 		choices.iter().enumerate()
 			.filter(|(_, choice)| choice.response.is_some())
 			.map(|(index, choice)| {
@@ -107,17 +145,5 @@ impl Choice {
 			})
 			.collect::<Vec<String>>()
 			.join("\n")
-	}
-
-	pub fn to_history_entry(&self, latest: &HistoryEntry, variables: &Variables) -> Option<Result<HistoryEntry>> {
-		self.jump.as_ref().map(|jump| {
-			Ok(HistoryEntry {
-				path: jump.fill(&latest.path)?,
-				display: self.display,
-				locked: self.lock,
-				notes: self.notes.clone().map(|actions| actions.apply).flatten(),
-				variables: self.variables.clone().map(|vars| VariableEntry::from_map(&vars, variables))
-			})
-		})
 	}
 }
