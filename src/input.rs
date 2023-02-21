@@ -7,14 +7,30 @@ pub struct InputController {
 	quit: bool
 }
 
+pub enum InputContext {
+	Choices(usize),
+	Variable(String, Option<String>)
+}
+
+impl InputContext {
+	const PROMPT: &'static str = "> ";
+
+	pub fn prompt(&self) -> &str {
+		use InputContext::*;
+		match self {
+			Choices(_) => Self::PROMPT,
+			Variable(_, prompt) => prompt.as_deref().unwrap_or(Self::PROMPT)
+		}
+	}
+}
+
 pub enum InputResult {
 	Quit(bool),
-	Choice(usize)
+	Choice(usize),
+	Variable(String, String)
 }
 
 impl InputController {
-	const PROMPT: &'static str = "> ";
-
 	pub fn new() -> Result<Self> {
 		Ok(Self {
 			rl: Editor::new()?,
@@ -22,27 +38,31 @@ impl InputController {
 		})
 	}
 
-	pub fn handle_line(line: &String, choices: usize) -> Result<InputResult> {
-		use InputResult::*;
+	pub fn handle_line(line: &String, context: &InputContext) -> Result<InputResult> {
 		if line.is_empty() {
 			return Err(anyhow!("Input cannot be empty"));
 		}
-		let choice = line.parse::<usize>()
-			.map_err(|_| anyhow!("Input must be a number"))?;
-		if choice < 1 || choice > choices {
-			return Err(anyhow!("Input out of range"))
+		match context {
+			&InputContext::Choices(choices) => {
+				let choice = line.parse::<usize>()
+				.map_err(|_| anyhow!("Input must be a number"))?;
+				if choice < 1 || choice > choices {
+					return Err(anyhow!("Input out of range"))
+				}
+				Ok(InputResult::Choice(choice))
+			}
+			InputContext::Variable(name, _) => Ok(InputResult::Variable(name.clone(), line.trim().to_owned()))
 		}
-		Ok(Choice(choice))
 	}
 
-	pub fn take_prompt(&mut self, prompt: &str, choices: usize) -> Result<InputResult> {
+	pub fn take(&mut self, context: &InputContext) -> Result<InputResult> {
 		use InputResult::*;
-		match self.rl.readline(prompt) {
+		match self.rl.readline(context.prompt()) {
 			Ok(line) => {
 				if self.quit {
 					self.quit = false;
 				}
-				let result = Self::handle_line(&line, choices)?;
+				let result = Self::handle_line(&line, context)?;
 				self.rl.add_history_entry(line);
 				Ok(result)
 			},
@@ -54,9 +74,5 @@ impl InputController {
 				return Ok(result);
 			}
 		}
-	}
-
-	pub fn take(&mut self, choices: usize) -> Result<InputResult> {
-		self.take_prompt(Self::PROMPT, choices)
 	}
 }

@@ -39,7 +39,7 @@ pub type Notes = HashSet<String>;
 pub struct VariableInput {
 	pub text: Option<String>,
 	#[serde(rename = "variable")]
-	name: String
+	pub name: String
 }
 
 /// A map of display variables wherein the key is the variable name and the value is the variable's display.

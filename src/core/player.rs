@@ -151,6 +151,9 @@ impl Player {
 		if let Some(actions) = &choice.notes {
 			self.accept_note_actions(actions);
 		}
+		if let Some(variables) = &choice.variables {
+			self.variables.extend(variables.clone());
+		}
 		Ok(())
 	}
 }

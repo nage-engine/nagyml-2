@@ -1,10 +1,8 @@
-use std::{fmt::Display, net::Shutdown};
+use anyhow::{Result, anyhow};
 
-use anyhow::Result;
+use crate::{input::{InputController, InputResult, InputContext}, core::choice::Choice};
 
-use crate::{input::{InputController, InputResult}, core::choice::Choice};
-
-use super::{player::Player, manifest::Manifest, prompt::{Prompt, Prompts}, text::{Text, TextSpeed}, choice::Choices};
+use super::{player::Player, manifest::Manifest, prompt::{Prompt, Prompts, PromptModel}, text::{Text, TextSpeed}};
 
 #[derive(Debug)]
 pub struct Game {
@@ -63,7 +61,7 @@ impl Game {
 
 	pub fn handle_choice(player: &mut Player, config: &Manifest, choice: &Choice) -> Result<InputLoopResult> {
 		use InputLoopResult::*;
-		player.choose(choice)?; println!();
+		player.choose(choice)?;
 		if let Some(ending) = &choice.ending {
 			Text::print_lines(ending, &player.variables, &config);
 			return Ok(Shutdown(true));
@@ -71,16 +69,32 @@ impl Game {
 		Ok(Continue)
 	}
 
-	pub fn take_input(input: &mut InputController, player: &mut Player, config: &Manifest, choices: &Vec<&Choice>) -> Result<InputLoopResult> {
+	//pub fn handle_variable(player: )
+
+	pub fn next_input_context(model: &PromptModel, choices: &Vec<&Choice>) -> Option<InputContext> {
+		use PromptModel::*;
+		match model {
+			Response => Some(InputContext::Choices(choices.len())),
+			&Input(name, prompt) => Some(InputContext::Variable(name.clone(), prompt.map(|s| s.clone()))),
+			_ => None
+		}
+	}
+
+	pub fn take_input(input: &mut InputController, player: &mut Player, config: &Manifest, choices: &Vec<&Choice>, context: &InputContext) -> Result<InputLoopResult> {
 		use InputLoopResult::*;
-		let result = match input.take(choices.len()) {
+		let result = match input.take(context) {
 			Err(err) => {
 				println!("{err}");
 				Retry
 			},
 			Ok(result) => match result {
 				InputResult::Quit(shutdown) => Self::handle_quit(shutdown),
-				InputResult::Choice(i) => Self::handle_choice(player, config, choices[i - 1])?
+				InputResult::Choice(i) => Self::handle_choice(player, config, choices[i - 1])?,
+				InputResult::Variable(name, input) => {
+					player.variables.insert(name, input);
+					player.choose(choices[0])?;
+					Continue
+				}
 			}
 		};
 		Ok(result)
@@ -95,14 +109,24 @@ impl Game {
 			let next_prompt = Prompt::get_from_path(&self.prompts, &entry.path)?;
 			let model = next_prompt.model();
 			let choices = next_prompt.usable_choices(&self.player.notes);
-			next_prompt.print(model, entry.display, &choices, &self.player.variables, &self.config);
-			
-			loop {
-				// Borrow-checker coercion; only using necessary fields in static method
-				match Self::take_input(&mut self.input, &mut self.player, &self.config, &choices)? {
-					InputLoopResult::Retry => println!(),
-					InputLoopResult::Continue => break,
-					InputLoopResult::Shutdown(silent) => break 'outer silent
+
+			next_prompt.print(&model, entry.display, &choices, &self.player.variables, &self.config);
+
+			match model {
+				PromptModel::Redirect(choice) => self.player.choose(choice)?,
+				PromptModel::Ending(lines) => {
+					Text::print_lines(lines, &self.player.variables, &self.config);
+					break 'outer true
+				},
+				_ => loop {
+					let context = Self::next_input_context(&model, &choices)
+        				.ok_or(anyhow!("Could not resolve input context"))?;
+					// Borrow-checker coercion; only using necessary fields in static method
+					match Self::take_input(&mut self.input, &mut self.player, &self.config, &choices, &context)? {
+						InputLoopResult::Retry => println!(),
+						InputLoopResult::Continue => { println!(); break },
+						InputLoopResult::Shutdown(silent) => break 'outer silent
+					}
 				}
 			}
 		};

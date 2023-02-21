@@ -23,11 +23,11 @@ pub struct Prompt {
 /// A prompt's overarching function based on its choices.
 pub enum PromptModel<'a> {
 	/// Has one choice. This choice has an `input` field.
-	Input(Option<&'a String>),
+	Input(&'a String, Option<&'a String>),
 	/// A normal prompt-choice container model.
 	Response,
 	/// Has one choice. This choice lacks response or input; immediately jumps to another prompt.
-	Redirect,
+	Redirect(&'a Choice),
 	/// Has one choice. This choice ends the game.
 	Ending(&'a TextLines)
 }
@@ -95,13 +95,13 @@ impl Prompt {
 		if self.choices.len() == 1 {
 			let choice = &self.choices[0];
 			if let Some(input) = &choice.input {
-				return Input(input.text.as_ref());
+				return Input(&input.name, input.text.as_ref());
 			}
 			else if choice.response.is_none() {
 				if let Some(ending) = &choice.ending {
 					return Ending(ending);
 				}
-				return Redirect;
+				return Redirect(choice);
 			}
 		}
 		Response
@@ -115,7 +115,7 @@ impl Prompt {
 	}
 
 	/// Prints the prompt text, if any, and the choices display, if any are responses.
-	pub fn print(&self, model: PromptModel, display: bool, usable_choices: &Vec<&Choice>, variables: &Variables, config: &Manifest) {
+	pub fn print(&self, model: &PromptModel, display: bool, usable_choices: &Vec<&Choice>, variables: &Variables, config: &Manifest) {
 		if display {
 			if let Some(lines) = &self.text {
 				Text::print_lines_nl(lines, variables, config);
