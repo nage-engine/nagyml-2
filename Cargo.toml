@@ -7,15 +7,12 @@ edition = "2021"
 
 [dependencies]
 serde = { version = "1.0.152", features = [ "derive" ] }
-regex = "1"
-lazy_static = "1.4.0"
-text-template = "0.1.0"
-thiserror = "1.0"
-walkdir = "2"
+serde_yaml = "0.8"
 semver = { version = "1.0.16", features = [ "serde" ] }
 format_serde_error = "0.3.0"
+walkdir = "2"
 anyhow = "1.0.69"
-serde_yaml = "0.8"
-rustyline = "10.1.1"
 snailshell = "0.3.1"
 ctrlc = "3.2.5"
+rustyline = "10.1.1"
+clap = { version = "4.1.6", features = [ "derive" ] }

@@ -1,6 +1,6 @@
 use anyhow::{Result, anyhow};
 
-use crate::{input::{InputController, InputResult, InputContext}, core::choice::Choice};
+use crate::{input::{commands::RuntimeCommand, controller::{InputController, InputResult, InputContext}}, core::choice::Choice};
 
 use super::{player::Player, manifest::Manifest, prompt::{Prompt, Prompts, PromptModel}, text::{Text, TextSpeed}};
 
@@ -13,7 +13,7 @@ pub struct Game {
 }
 
 pub enum InputLoopResult {
-	Retry,
+	Retry(bool),
 	Continue,
 	Shutdown(bool)
 }
@@ -55,7 +55,7 @@ impl Game {
 		}
 		else { 
 			println!("Signal quit again or use `.quit` to exit");
-			Retry
+			Retry(true)
 		}
 	}
 
@@ -85,7 +85,7 @@ impl Game {
 		let result = match input.take(context) {
 			Err(err) => {
 				println!("{err}");
-				Retry
+				Retry(true)
 			},
 			Ok(result) => match result {
 				InputResult::Quit(shutdown) => Self::handle_quit(shutdown),
@@ -94,6 +94,13 @@ impl Game {
 					player.variables.insert(name, input);
 					player.choose(choices[0])?;
 					Continue
+				},
+				InputResult::Command(parse) => {
+					match &parse {
+						Err(err) => println!("\n{err}"),
+						Ok(command) => command.run()
+					};
+					Retry(parse.is_ok())
 				}
 			}
 		};
@@ -115,6 +122,7 @@ impl Game {
 			match model {
 				PromptModel::Redirect(choice) => self.player.choose(choice)?,
 				PromptModel::Ending(lines) => {
+					println!();
 					Text::print_lines(lines, &self.player.variables, &self.config);
 					break 'outer true
 				},
@@ -123,7 +131,7 @@ impl Game {
         				.ok_or(anyhow!("Could not resolve input context"))?;
 					// Borrow-checker coercion; only using necessary fields in static method
 					match Self::take_input(&mut self.input, &mut self.player, &self.config, &choices, &context)? {
-						InputLoopResult::Retry => println!(),
+						InputLoopResult::Retry(flush) => if flush { println!() },
 						InputLoopResult::Continue => { println!(); break },
 						InputLoopResult::Shutdown(silent) => break 'outer silent
 					}
