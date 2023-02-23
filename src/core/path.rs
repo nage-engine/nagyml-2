@@ -18,4 +18,9 @@ impl Path {
 			file: Some(file.clone())
 		})
 	}
+
+	pub fn matches(&self, file: &String, other_name: &String, other_file: &String) -> bool {
+		let pointing_file = self.file.as_ref().unwrap_or(file);
+		self.prompt.eq(other_name) && pointing_file.eq(other_file)
+	}
 }

@@ -10,7 +10,7 @@ mod loading;
 
 fn main() -> Result<()> {
     let mut game = Game::load()?;
-    let _ = game.validate()?;
+    game.validate()?;
     let silent = game.begin()?;
     game.shutdown(silent);
     

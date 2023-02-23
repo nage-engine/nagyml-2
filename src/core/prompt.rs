@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::{collections::{BTreeMap, HashMap}, fmt::Display};
 
 use anyhow::{Result, Context, anyhow};
 use serde::{Serialize, Deserialize};
@@ -32,6 +32,27 @@ pub enum PromptModel<'a> {
 	Ending(&'a TextLines)
 }
 
+impl<'a> Display for PromptModel<'a> {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "Model: {}", self.description())
+	}
+}
+
+impl<'a> PromptModel<'a> {
+	/// The prompt model's readable description for debug purposes.
+	/// 
+	/// Outputs the model's name and then its function.
+	pub fn description(&self) -> String {
+		use PromptModel::*;
+		match self {
+			Input(name, _) => format!("Input; takes user input for the variable '{name}'"),
+			Response => "Response; standard prompt-choice model".to_owned(),
+			Redirect(_) => "Redirect; jumps to another prompt without input".to_owned(),
+			Ending(_) => "Ending; the game is forced to end".to_owned()
+		}
+	}
+}
+
 /// A map of prompt names to prompt containers within a single file.
 pub type PromptFile = BTreeMap<String, Prompt>;
 
@@ -59,10 +80,15 @@ impl Prompt {
 			.collect()
 	}
 
-	/// Finds a specific prompt within a [`Prompts`] object.
-	pub fn get<'a>(prompts: &'a Prompts, name: &String, file: &String) -> Result<&'a Prompt> {
+	/// Finds a specific prompt file within a [`Prompts`] object.
+	pub fn get_file<'a>(prompts: &'a Prompts, file: &String) -> Result<&'a PromptFile> {
 		prompts.get(file)
 			.ok_or(anyhow!("Invalid prompt file '{file}'"))
+	}
+
+	/// Finds a specific prompt within a [`Prompts`] object.
+	pub fn get<'a>(prompts: &'a Prompts, name: &String, file: &String) -> Result<&'a Prompt> {
+		Self::get_file(prompts, file)
 			.map(|prompt_file| {
 				prompt_file.get(name).ok_or(anyhow!("Invalid prompt '{name}'; not found in file '{file}'"))
 			})
@@ -124,5 +150,48 @@ impl Prompt {
 		if let PromptModel::Response = model {
 			println!("{}\n", Choice::display(usable_choices, variables));
 		}
+	}
+
+	/// Returns the indices of any of this prompt's choices that jump to another prompt.
+	/// 
+	/// Uses [`Choice::has_jump_to`].
+	pub fn get_jumps_to(&self, file: &String, other_name: &String, other_file: &String) -> Vec<usize> {
+		self.choices.iter().enumerate()
+    		.filter(|(_, choice)| choice.has_jump_to(file, other_name, other_file))
+    		.map(|(index, _)| index)
+			.collect()
+	}
+
+	/// Finds all prompts that have choices that jump to a specific prompt name and file.
+	/// 
+	/// Uses [`Prompt::get_jumps_to`] to find the indices of the choices, if any.
+	pub fn external_jumps<'a>(name: &String, file: &String, prompts: &'a Prompts) -> HashMap<String, Vec<usize>> {
+		prompts.iter()
+    		.map(|(other_file_name, prompt_file)| {
+				prompt_file.iter()
+					.map(|(other_prompt_name, other_prompt)| {
+						let id = format!("{}/{}", other_file_name.clone(), other_prompt_name.clone());
+						(id, other_prompt.get_jumps_to(other_file_name, name, file))
+					})
+    				.filter(|(_, choices)| !choices.is_empty())
+			})
+    		.flatten()
+    		.collect()
+	}
+
+	pub fn debug_info(&self, name: &String, file: &String, prompts: &Prompts, notes: &Notes) -> String {
+		let model = self.model();
+		let choices_amt = self.choices.len();
+		let usable_choices = self.usable_choices(notes).len();
+		let external_jumps: Vec<String> = Self::external_jumps(name, file, prompts).iter()
+    		.map(|(other_id, choices)| {
+				let indices: Vec<String> = choices.iter().map(|i| format!("#{}", i + 1)).collect();
+				format!("- {other_id}: {}", indices.join(", "))
+			})
+    		.collect();
+		let id_and_model = format!("ID: {file}/{name}\n{model}");
+		let choices = format!("{choices_amt} choice(s)\n{usable_choices} of them accessible");
+		let jumps = format!("Prompts that jump here:\n{}", external_jumps.join("\n"));
+		format!("\n{id_and_model}\n\n{choices}\n\n{jumps}")
 	}
 }

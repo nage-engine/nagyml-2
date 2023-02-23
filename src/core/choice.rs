@@ -146,4 +146,14 @@ impl Choice {
 			.collect::<Vec<String>>()
 			.join("\n")
 	}
+
+	/// Whether this choice jumps to a specific prompt.
+	/// 
+	/// Returns `true` if the choice has a `jump` path and [`Path::matches`] passes.
+	pub fn has_jump_to(&self, file: &String, other_name: &String, other_file: &String) -> bool {
+		match &self.jump {
+			None => false,
+			Some(jump) => jump.matches(file, other_name, other_file)
+		}
+	}
 }

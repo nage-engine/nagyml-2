@@ -1,6 +1,6 @@
 use anyhow::{Result, anyhow};
 
-use crate::{input::{commands::RuntimeCommand, controller::{InputController, InputResult, InputContext}}, core::choice::Choice};
+use crate::{input::{controller::{InputController, InputResult, InputContext}, commands::CommandResult}, core::choice::Choice};
 
 use super::{player::Player, manifest::Manifest, prompt::{Prompt, Prompts, PromptModel}, text::{Text, TextSpeed}};
 
@@ -63,13 +63,12 @@ impl Game {
 		use InputLoopResult::*;
 		player.choose(choice)?;
 		if let Some(ending) = &choice.ending {
+			println!();
 			Text::print_lines(ending, &player.variables, &config);
 			return Ok(Shutdown(true));
 		}
 		Ok(Continue)
 	}
-
-	//pub fn handle_variable(player: )
 
 	pub fn next_input_context(model: &PromptModel, choices: &Vec<&Choice>) -> Option<InputContext> {
 		use PromptModel::*;
@@ -80,7 +79,7 @@ impl Game {
 		}
 	}
 
-	pub fn take_input(input: &mut InputController, player: &mut Player, config: &Manifest, choices: &Vec<&Choice>, context: &InputContext) -> Result<InputLoopResult> {
+	pub fn take_input(input: &mut InputController, prompts: &Prompts, player: &mut Player, config: &Manifest, choices: &Vec<&Choice>, context: &InputContext) -> Result<InputLoopResult> {
 		use InputLoopResult::*;
 		let result = match input.take(context) {
 			Err(err) => {
@@ -97,8 +96,18 @@ impl Game {
 				},
 				InputResult::Command(parse) => {
 					match &parse {
-						Err(err) => println!("\n{err}"),
-						Ok(command) => command.run()
+						Err(err) => println!("\n{err}"), // Clap error
+						Ok(command) => {
+							match command.run(prompts, player) {
+								Err(err) => println!("Error: {err}"), // Command runtime error
+								Ok(result) => {
+									match result {
+										CommandResult::Submit(loop_result) => return Ok(loop_result),
+										CommandResult::Output(output) => println!("{output}")
+									}
+								}
+							}
+						}
 					};
 					Retry(parse.is_ok())
 				}
@@ -130,7 +139,7 @@ impl Game {
 					let context = Self::next_input_context(&model, &choices)
         				.ok_or(anyhow!("Could not resolve input context"))?;
 					// Borrow-checker coercion; only using necessary fields in static method
-					match Self::take_input(&mut self.input, &mut self.player, &self.config, &choices, &context)? {
+					match Self::take_input(&mut self.input, &self.prompts, &mut self.player, &self.config, &choices, &context)? {
 						InputLoopResult::Retry(flush) => if flush { println!() },
 						InputLoopResult::Continue => { println!(); break },
 						InputLoopResult::Shutdown(silent) => break 'outer silent
