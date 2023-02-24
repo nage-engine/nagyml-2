@@ -2,13 +2,14 @@ use anyhow::{Result, anyhow};
 
 use crate::{input::{controller::{InputController, InputResult, InputContext}, commands::CommandResult}, core::choice::Choice, loading::load_content};
 
-use super::{player::Player, manifest::Manifest, prompt::{Prompt, Prompts, PromptModel}, text::{Text, TextSpeed}};
+use super::{player::Player, manifest::Manifest, prompt::{Prompt, Prompts, PromptModel}, text::{Text, TextSpeed, Translations}};
 
 #[derive(Debug)]
 pub struct Game {
 	pub config: Manifest,
 	pub player: Player,
 	prompts: Prompts,
+	lang: Translations,
 	input: InputController
 }
 
@@ -23,8 +24,9 @@ impl Game {
 		let config = Manifest::load()?;
 		let player = Player::load(&config.entry)?;
 		let prompts = load_content("prompts")?;
+		let lang = load_content("lang")?;
 		let input = InputController::new()?;
-		Ok(Self { config, player, prompts, input })
+		Ok(Self { config, player, prompts, lang, input })
 	}
 
 	pub fn validate(&self) -> Result<()> {

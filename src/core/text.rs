@@ -1,7 +1,9 @@
-use std::fmt::Display;
+use std::{fmt::Display, collections::HashMap};
 
 use serde::{Serialize, Deserialize};
 use snailshell::snailprint_s;
+
+use crate::loading::{Contents, ContentFile};
 
 use super::{choice::Variables, manifest::Manifest};
 
@@ -89,7 +91,11 @@ pub struct Text {
 	pub speed: Option<TextSpeed>
 }
 
+/// An ordered list of text objects.
 pub type TextLines = Vec<Text>;
+
+pub type TranslationFile = ContentFile<String>;
+pub type Translations = Contents<String>;
 
 impl Display for Text {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
