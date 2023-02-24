@@ -6,6 +6,9 @@ use crate::core::{player::Player, prompt::{Prompts, Prompt as PromptUtil}, game:
 
 #[derive(Parser, Debug, PartialEq)]
 #[command(multicall = true)]
+/// The commands used for the runtime REPL.
+/// 
+/// Debug commands are hidden from the `help` output.
 pub enum RuntimeCommand {
 	#[command(about = "Tries going back a choice")]
 	Back,
@@ -33,14 +36,25 @@ pub enum RuntimeCommand {
 	Variables,
 }
 
+/// The result of a runtime command.
 pub enum CommandResult {
+	/// Returns an input loop result to the original input call.
 	Submit(InputLoopResult),
+	/// Outputs a specified string and submits [`Retry`](InputLoopResult::Retry).
 	Output(String)
 }
 
 impl RuntimeCommand {
-	pub const DEFAULT_COMMANDS: [RuntimeCommand; 3] = [RuntimeCommand::Back, RuntimeCommand::Save, RuntimeCommand::Quit];
+	/// The commands allowed in a default, non-debug environment.
+	pub const DEFAULT_COMMANDS: [RuntimeCommand; 3] = [
+		RuntimeCommand::Back, 
+		RuntimeCommand::Save, 
+		RuntimeCommand::Quit
+	];
 
+	/// Executes a runtime command if the player has permission to do so.
+	///
+	/// Any errors will be reported to the input loop with a retry following.
 	pub fn run(&self, prompts: &Prompts, player: &mut Player, config: &Manifest) -> Result<CommandResult> {
 		if !Self::DEFAULT_COMMANDS.contains(&self) && !config.settings.debug {
 			return Err(anyhow!("Unable to access debug commands"));
