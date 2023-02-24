@@ -2,14 +2,14 @@ use anyhow::{Result, anyhow};
 
 use crate::{input::{controller::{InputController, InputResult, InputContext}, commands::CommandResult}, core::choice::Choice, loading::load_content};
 
-use super::{player::Player, manifest::Manifest, prompt::{Prompt, Prompts, PromptModel}, text::{Text, TextSpeed, Translations}};
+use super::{player::Player, manifest::Manifest, prompt::{Prompt, Prompts, PromptModel}, text::{Text, TextSpeed, Translations, TranslationFile}};
 
 #[derive(Debug)]
 pub struct Game {
 	pub config: Manifest,
 	pub player: Player,
 	prompts: Prompts,
-	lang: Translations,
+	translations: Translations,
 	input: InputController
 }
 
@@ -24,9 +24,9 @@ impl Game {
 		let config = Manifest::load()?;
 		let player = Player::load(&config.entry)?;
 		let prompts = load_content("prompts")?;
-		let lang = load_content("lang")?;
+		let translations = load_content("lang")?;
 		let input = InputController::new()?;
-		Ok(Self { config, player, prompts, lang, input })
+		Ok(Self { config, player, prompts, translations, input })
 	}
 
 	pub fn validate(&self) -> Result<()> {
@@ -45,7 +45,8 @@ impl Game {
 	pub fn init(&mut self) {
 		self.speed().print_nl(&self.config.metadata);
 		if let Some(background) = &self.config.entry.background {
-			Text::print_lines_nl(background, &self.player.variables, &self.config);
+			let lang_file = Text::lang_file(&self.translations, &self.player.lang);
+			Text::print_lines_nl(background, &self.player.variables, &self.config, lang_file);
 		}
 		self.player.began = true;
 	}
@@ -61,12 +62,12 @@ impl Game {
 		}
 	}
 
-	pub fn handle_choice(player: &mut Player, config: &Manifest, choice: &Choice) -> Result<InputLoopResult> {
+	pub fn handle_choice(player: &mut Player, config: &Manifest, lang_file: Option<&TranslationFile>, choice: &Choice) -> Result<InputLoopResult> {
 		use InputLoopResult::*;
 		player.choose(choice, None, config)?;
 		if let Some(ending) = &choice.ending {
 			println!();
-			Text::print_lines(ending, &player.variables, &config);
+			Text::print_lines(ending, &player.variables, &config, lang_file);
 			return Ok(Shutdown(true));
 		}
 		Ok(Continue)
@@ -81,7 +82,7 @@ impl Game {
 		}
 	}
 
-	pub fn take_input(input: &mut InputController, prompts: &Prompts, player: &mut Player, config: &Manifest, choices: &Vec<&Choice>, context: &InputContext) -> Result<InputLoopResult> {
+	pub fn take_input(input: &mut InputController, prompts: &Prompts, player: &mut Player, config: &Manifest, lang_file: Option<&TranslationFile>, choices: &Vec<&Choice>, context: &InputContext) -> Result<InputLoopResult> {
 		use InputLoopResult::*;
 		let result = match input.take(context) {
 			Err(err) => {
@@ -90,7 +91,7 @@ impl Game {
 			},
 			Ok(result) => match result {
 				InputResult::Quit(shutdown) => Self::handle_quit(shutdown),
-				InputResult::Choice(i) => Self::handle_choice(player, config, choices[i - 1])?,
+				InputResult::Choice(i) => Self::handle_choice(player, config, lang_file, choices[i - 1])?,
 				InputResult::Variable(result) => {
 					// Modify variables after the choose call since history entries are sensitive to this order
 					player.choose(choices[0], Some(&result), config)?;
@@ -124,25 +125,26 @@ impl Game {
 			self.init();
 		}
 		let silent = 'outer: loop {
+			let lang_file = Text::lang_file(&self.translations, &self.player.lang);
 			let entry = self.player.latest_entry()?;
 			let next_prompt = Prompt::get_from_path(&self.prompts, &entry.path)?;
 			let model = next_prompt.model();
 			let choices = next_prompt.usable_choices(&self.player.notes);
-
-			next_prompt.print(&model, entry.display, &choices, &self.player.variables, &self.config);
+			
+			next_prompt.print(&model, entry.display, &choices, &self.player.variables, &self.config, lang_file);
 
 			match model {
 				PromptModel::Redirect(choice) => self.player.choose(choice, None, &self.config)?,
 				PromptModel::Ending(lines) => {
 					println!();
-					Text::print_lines(lines, &self.player.variables, &self.config);
+					Text::print_lines(lines, &self.player.variables, &self.config, lang_file);
 					break 'outer true
 				},
 				_ => loop {
 					let context = Self::next_input_context(&model, &choices)
         				.ok_or(anyhow!("Could not resolve input context"))?;
 					// Borrow-checker coercion; only using necessary fields in static method
-					match Self::take_input(&mut self.input, &self.prompts, &mut self.player, &self.config, &choices, &context)? {
+					match Self::take_input(&mut self.input, &self.prompts, &mut self.player, &self.config, lang_file, &choices, &context)? {
 						InputLoopResult::Retry(flush) => if flush { println!() },
 						InputLoopResult::Continue => { println!(); break },
 						InputLoopResult::Shutdown(silent) => break 'outer silent

@@ -97,11 +97,11 @@ pub type TextLines = Vec<Text>;
 pub type TranslationFile = ContentFile<String>;
 pub type Translations = Contents<String>;
 
-impl Display for Text {
+/*impl Display for Text {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.mode.format(&self.content))
     }
-}
+}*/
 
 impl Text {
 	/// The default value for an undefined interpolation variable.
@@ -140,33 +140,40 @@ impl Text {
 	}
 
 	/// Formats the text content based on its [`Mode`] and fills in any interpolation variables.
-	pub fn get(&self, variables: &Variables) -> String {
-		Self::fill(self.to_string(), variables)
+	pub fn get(&self, variables: &Variables, lang_file: Option<&TranslationFile>) -> String {
+		let content = lang_file.map(|file| file.get(&self.content))
+			.flatten()
+			.unwrap_or(&self.content);
+		Self::fill(self.mode.format(content), variables)
 	}
 
 	/// Formats and snailprints text based on its [`TextSpeed`]. 
 	/// 
 	/// If the text object does not contain a `speed` field, defaults to the provided config settings.
-	pub fn print(&self, variables: &Variables, config: &Manifest) {
+	pub fn print(&self, variables: &Variables, config: &Manifest, lang_file: Option<&TranslationFile>) {
 		let speed = self.speed.as_ref().unwrap_or(&config.settings.speed);
-		speed.print(&self.get(variables));
+		speed.print(&self.get(variables, lang_file));
 	}
 
 	/// Formats lines of text and prints them sequentially.
 	/// 
 	/// Separates each formatted line with newlines. Between two text lines, if their text modes differ, uses two newlines; otherwise, uses one.
-	pub fn print_lines(lines: &TextLines, variables: &Variables, config: &Manifest) {
+	pub fn print_lines(lines: &TextLines, variables: &Variables, config: &Manifest, lang_file: Option<&TranslationFile>) {
 		for (index, line) in lines.iter().enumerate() {
 			if index > 0 && lines[index - 1].mode != line.mode {
 				println!(); // Newline
 			}
-			line.print(variables, config);
+			line.print(variables, config, lang_file);
 		}
 	}
 
 	/// Calls [`Text::print_lines`] and prints a newline at the end.
-	pub fn print_lines_nl(lines: &TextLines, variables: &Variables, config: &Manifest) {
-		Self::print_lines(lines, variables, config);
+	pub fn print_lines_nl(lines: &TextLines, variables: &Variables, config: &Manifest, lang_file: Option<&TranslationFile>) {
+		Self::print_lines(lines, variables, config, lang_file);
 		println!();
+	}
+
+	pub fn lang_file<'a>(translations: &'a Translations, lang: &String) -> Option<&'a TranslationFile> {
+		translations.get(lang)
 	}
 }

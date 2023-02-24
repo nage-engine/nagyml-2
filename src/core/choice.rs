@@ -2,7 +2,7 @@ use std::{collections::{HashMap, HashSet}};
 
 use crate::input::controller::VariableInputResult;
 
-use super::{text::{Text, TextLines}, path::Path, prompt::{Prompts, Prompt}, player::{HistoryEntry, VariableEntry, VariableEntries}, manifest::Manifest};
+use super::{text::{Text, TextLines, TranslationFile}, path::Path, prompt::{Prompts, Prompt}, player::{HistoryEntry, VariableEntry, VariableEntries}, manifest::Manifest};
 
 use anyhow::{Result, anyhow, Context};
 use serde::{Serialize, Deserialize};
@@ -148,7 +148,7 @@ impl Choice {
 	/// Constructs a [`String`] of ordered choice responses.
 	/// 
 	/// The format for each choice is `i) [tag] response`.
-	pub fn display(choices: &Vec<&Choice>, variables: &Variables) -> String {
+	pub fn display(choices: &Vec<&Choice>, variables: &Variables, lang_file: Option<&TranslationFile>) -> String {
 		choices.iter().enumerate()
 			.filter(|(_, choice)| choice.response.is_some())
 			.map(|(index, choice)| {
@@ -157,7 +157,7 @@ impl Choice {
 					.map(|s| format!("[{s}] "))
 					.unwrap_or(String::new());
 				// Fill response
-				let response = choice.response.as_ref().unwrap().get(variables);
+				let response = choice.response.as_ref().unwrap().get(variables, lang_file);
 				format!("{}) {tag}{response}", index + 1)
 			})
 			.collect::<Vec<String>>()

@@ -69,6 +69,8 @@ impl HistoryEntry {
 pub struct Player {
 	/// Whether the player has started playing the game.
 	pub began: bool,
+	/// The player's display language.
+	pub lang: String,
 	/// The player's current notes.
 	pub notes: Notes,
 	/// The player's current variables.
@@ -85,6 +87,7 @@ impl Player {
 		let entry = HistoryEntry::new(&entrypoint.path);
 		Self {
 			began: false,
+			lang: String::from("en_us"),
 			notes: entrypoint.notes.clone().unwrap_or(HashSet::new()),
 			variables: entrypoint.variables.clone().unwrap_or(HashMap::new()),
 			history: VecDeque::from(vec![entry])
