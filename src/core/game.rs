@@ -99,7 +99,7 @@ impl Game {
 					match &parse {
 						Err(err) => println!("\n{err}"), // Clap error
 						Ok(command) => {
-							match command.run(prompts, player) {
+							match command.run(prompts, player, config) {
 								Err(err) => println!("Error: {err}"), // Command runtime error
 								Ok(result) => {
 									match result {
