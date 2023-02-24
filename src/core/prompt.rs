@@ -2,9 +2,8 @@ use std::{collections::{BTreeMap, HashMap}, fmt::Display};
 
 use anyhow::{Result, Context, anyhow};
 use serde::{Serialize, Deserialize};
-use walkdir::WalkDir;
 
-use crate::loading::load;
+use crate::loading::{load, get_content_iterator};
 
 use super::{text::{TextLines, Text}, choice::{Choices, Variables, Choice, Notes}, path::Path, manifest::Manifest};
 
@@ -60,24 +59,11 @@ pub type PromptFile = BTreeMap<String, Prompt>;
 pub type Prompts = BTreeMap<String, PromptFile>;
 
 impl Prompt {
-	/// Loads a [`PromptFile`] using [`load`] and returns a tuple of the file key and the loaded content.
-	/// 
-	/// For example, the path `prompts/dir/file.yml` would yield the key `dir/file`.
-	fn load(path: &std::path::Path) -> Result<(String, PromptFile)> {
-		let key_path = path.strip_prefix("prompts/").unwrap().with_extension("");
-		let key = key_path.as_os_str().to_str().unwrap().to_owned();
-		let loaded = load(&path.to_path_buf())?;
-		Ok((key, loaded))
-	}
-
-	/// Recursively walks, loads, and collects all [`PromptFile`]s from a local `prompts` directory into a [`Prompts`] object using [`load_prompt`].
+	/// Loads all [`PromptFile`]s from a local `prompts` directory into a [`Prompts`] object.
 	pub fn load_all() -> Result<Prompts> {
-		WalkDir::new("prompts")
-			.into_iter()
-			.filter_map(|e| e.ok())
-			.filter(|e| e.path().is_file())
-			.map(|e| Self::load(e.path()))
-			.collect()
+		get_content_iterator("prompts")	
+    		.map(|(path, key)| Ok((key, load(&path.to_path_buf())?)))
+    		.collect()
 	}
 
 	/// Finds a specific prompt file within a [`Prompts`] object.
