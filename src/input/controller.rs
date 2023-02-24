@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use anyhow::{Result, anyhow};
 use clap::Parser;
 use rustyline::Editor;
@@ -56,11 +54,9 @@ impl InputController {
 
 	pub fn parse_command(line: String) -> Result<RuntimeCommand> {
 		// Split line into command + arguments after '.' starting character
-		let mut args: VecDeque<String> = line.strip_prefix(".").unwrap().split(" ")
+		let args: Vec<String> = line.strip_prefix(".").unwrap().split(" ")
 			.map(|s| s.to_owned())
 			.collect();
-		// Hack to treat 'runtime' as the main command and parse subcommands with clap
-		args.push_front(String::from("runtime"));
 		RuntimeCommand::try_parse_from(args)
 			.map_err(|e| anyhow!(e))
 	}
