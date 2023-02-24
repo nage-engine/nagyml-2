@@ -26,10 +26,9 @@ impl Display for Metadata {
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(default, deny_unknown_fields)]
-///
 pub struct HistorySettings {
-	locked: bool,
-	size: usize
+	pub locked: bool,
+	pub size: usize
 }
 
 impl Default for HistorySettings {

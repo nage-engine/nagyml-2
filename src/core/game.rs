@@ -61,7 +61,7 @@ impl Game {
 
 	pub fn handle_choice(player: &mut Player, config: &Manifest, choice: &Choice) -> Result<InputLoopResult> {
 		use InputLoopResult::*;
-		player.choose(choice, None)?;
+		player.choose(choice, None, config)?;
 		if let Some(ending) = &choice.ending {
 			println!();
 			Text::print_lines(ending, &player.variables, &config);
@@ -91,7 +91,7 @@ impl Game {
 				InputResult::Choice(i) => Self::handle_choice(player, config, choices[i - 1])?,
 				InputResult::Variable(result) => {
 					// Modify variables after the choose call since history entries are sensitive to this order
-					player.choose(choices[0], Some(&result))?;
+					player.choose(choices[0], Some(&result), config)?;
 					player.variables.insert(result.0.clone(), result.1.clone());
 					Continue
 				},
@@ -130,7 +130,7 @@ impl Game {
 			next_prompt.print(&model, entry.display, &choices, &self.player.variables, &self.config);
 
 			match model {
-				PromptModel::Redirect(choice) => self.player.choose(choice, None)?,
+				PromptModel::Redirect(choice) => self.player.choose(choice, None, &self.config)?,
 				PromptModel::Ending(lines) => {
 					println!();
 					Text::print_lines(lines, &self.player.variables, &self.config);

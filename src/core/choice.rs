@@ -2,7 +2,7 @@ use std::{collections::{HashMap, HashSet}};
 
 use crate::input::controller::VariableInputResult;
 
-use super::{text::{Text, TextLines}, path::Path, prompt::{Prompts, Prompt}, player::{HistoryEntry, VariableEntry, VariableEntries}};
+use super::{text::{Text, TextLines}, path::Path, prompt::{Prompts, Prompt}, player::{HistoryEntry, VariableEntry, VariableEntries}, manifest::Manifest};
 
 use anyhow::{Result, anyhow, Context};
 use serde::{Serialize, Deserialize};
@@ -50,16 +50,14 @@ pub type Variables = HashMap<String, String>;
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Choice {
-	//#[serde(alias = "response", alias = "input")]
-	//value: ChoiceType,
 	pub response: Option<Text>,
 	tag: Option<String>,
 	pub input: Option<VariableInput>,
 	pub jump: Option<Path>,
 	#[serde(default = "default_true")]
 	pub display: bool,
-	#[serde(default)]
-	pub lock: bool,
+	// This is an option for easier defaulting to the config state
+	pub lock: Option<bool>,
 	pub notes: Option<NoteActions>,
 	pub variables: Option<Variables>,
 	pub ending: Option<TextLines>
@@ -112,12 +110,12 @@ impl Choice {
 	/// Constructs a [`HistoryEntry`] based on this choice object. 
 	/// 
 	/// Copies over control flags, the path based on the latest history entry, and notes and variable applications.
-	pub fn to_history_entry(&self, latest: &HistoryEntry, input: Option<&VariableInputResult>, variables: &Variables) -> Option<Result<HistoryEntry>> {
+	pub fn to_history_entry(&self, latest: &HistoryEntry, input: Option<&VariableInputResult>, variables: &Variables, config: &Manifest) -> Option<Result<HistoryEntry>> {
 		self.jump.as_ref().map(|jump| {
 			Ok(HistoryEntry {
 				path: jump.fill(&latest.path)?,
 				display: self.display,
-				locked: self.lock,
+				locked: self.lock.unwrap_or(config.settings.history.locked),
 				notes: self.notes.clone().map(|actions| actions.apply).flatten(),
 				variables: self.create_variable_entries(input, variables)
 			})

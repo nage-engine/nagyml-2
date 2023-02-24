@@ -1,11 +1,11 @@
-use std::{collections::{HashMap, HashSet}, vec};
+use std::{collections::{HashMap, HashSet, VecDeque}, vec};
 
 use anyhow::{Result, Context, anyhow};
 use serde::{Serialize, Deserialize};
 
 use crate::{loading::parse, input::controller::VariableInputResult};
 
-use super::{path::Path, choice::{NoteApplication, Notes, Variables, NoteActions, Choice}, manifest::Entrypoint};
+use super::{path::Path, choice::{NoteApplication, Notes, Variables, NoteActions, Choice}, manifest::{Entrypoint, Manifest}};
 
 #[derive(Serialize, Deserialize, Debug)]
 /// A single variable value recording.
@@ -74,7 +74,7 @@ pub struct Player {
 	/// The player's current variables.
 	pub variables: Variables,
 	/// Recordings of each prompt jump and their associated value changes.
-	pub history: Vec<HistoryEntry>
+	pub history: VecDeque<HistoryEntry>
 }
 
 impl Player {
@@ -87,7 +87,7 @@ impl Player {
 			began: false,
 			notes: entrypoint.notes.clone().unwrap_or(HashSet::new()),
 			variables: entrypoint.variables.clone().unwrap_or(HashMap::new()),
-			history: vec![entry]
+			history: VecDeque::from(vec![entry])
 		}
 	}
 
@@ -137,7 +137,7 @@ impl Player {
 
 	/// Returns the latest history entry, if any.
 	pub fn latest_entry(&self) -> Result<&HistoryEntry> {
-		self.history.last().ok_or(anyhow!("History empty"))
+		self.history.back().ok_or(anyhow!("History empty"))
 	}
 
 	/// If the latest history entry is able to be reversed, pops and returns it from the entry list.
@@ -146,16 +146,20 @@ impl Player {
 		if latest.locked {
 			return Err(anyhow!("Can't go back right now!"))
 		}
-		Ok(player.history.pop().unwrap())
+		Ok(player.history.pop_front().unwrap())
 	}
 
 	/// Appends a new entry to the history data based on what happened during the last input loop.
 	/// 
-	/// There must always be at least one history entry to take modifications from. If there isn't, something has gone wrong.
-	pub fn push_history(&mut self, choice: &Choice, input: Option<&VariableInputResult>) -> Result<()> {
+	/// There must always be at least one history entry to take modifications from.
+	/// Additionally, this call respect's the game's [`HistorySettings`] and prunes the front of the history list based on the size.
+	pub fn push_history(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest) -> Result<()> {
 		let latest = self.latest_entry()?;
-		if let Some(entry) = choice.to_history_entry(&latest, input, &self.variables) {
-			self.history.push(entry?);
+		if let Some(entry) = choice.to_history_entry(&latest, input, &self.variables, config) {
+			self.history.push_back(entry?);
+		}
+		if self.history.len() > config.settings.history.size {
+			self.history.pop_front();
 		}
 		Ok(())
 	}
@@ -178,8 +182,8 @@ impl Player {
 		Ok(())
 	}
 
-	pub fn choose(&mut self, choice: &Choice, input: Option<&VariableInputResult>) -> Result<()> {
-		self.push_history(choice, input)?;
+	pub fn choose(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest) -> Result<()> {
+		self.push_history(choice, input, config)?;
 		if let Some(actions) = &choice.notes {
 			self.accept_note_actions(actions);
 		}
