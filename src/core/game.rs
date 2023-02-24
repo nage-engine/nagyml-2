@@ -1,6 +1,6 @@
 use anyhow::{Result, anyhow};
 
-use crate::{input::{controller::{InputController, InputResult, InputContext}, commands::CommandResult}, core::choice::Choice};
+use crate::{input::{controller::{InputController, InputResult, InputContext}, commands::CommandResult}, core::choice::Choice, loading::load_content};
 
 use super::{player::Player, manifest::Manifest, prompt::{Prompt, Prompts, PromptModel}, text::{Text, TextSpeed}};
 
@@ -22,7 +22,7 @@ impl Game {
 	pub fn load() -> Result<Self> {
 		let config = Manifest::load()?;
 		let player = Player::load(&config.entry)?;
-		let prompts = Prompt::load_all()?;
+		let prompts = load_content("prompts")?;
 		let input = InputController::new()?;
 		Ok(Self { config, player, prompts, input })
 	}

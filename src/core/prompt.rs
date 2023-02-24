@@ -3,7 +3,7 @@ use std::{collections::{BTreeMap, HashMap}, fmt::Display};
 use anyhow::{Result, Context, anyhow};
 use serde::{Serialize, Deserialize};
 
-use crate::loading::{load, get_content_iterator};
+use crate::loading::{load, get_content_iterator, ContentFile, Contents};
 
 use super::{text::{TextLines, Text}, choice::{Choices, Variables, Choice, Notes}, path::Path, manifest::Manifest};
 
@@ -52,20 +52,10 @@ impl<'a> PromptModel<'a> {
 	}
 }
 
-/// A map of prompt names to prompt containers within a single file.
-pub type PromptFile = BTreeMap<String, Prompt>;
-
-/// A map of file names to prompt files.
-pub type Prompts = BTreeMap<String, PromptFile>;
+pub type PromptFile = ContentFile<Prompt>;
+pub type Prompts = Contents<Prompt>;
 
 impl Prompt {
-	/// Loads all [`PromptFile`]s from a local `prompts` directory into a [`Prompts`] object.
-	pub fn load_all() -> Result<Prompts> {
-		get_content_iterator("prompts")	
-    		.map(|(path, key)| Ok((key, load(&path.to_path_buf())?)))
-    		.collect()
-	}
-
 	/// Finds a specific prompt file within a [`Prompts`] object.
 	pub fn get_file<'a>(prompts: &'a Prompts, file: &String) -> Result<&'a PromptFile> {
 		prompts.get(file)
