@@ -1,6 +1,8 @@
 use std::{collections::{HashMap, HashSet}};
 
-use super::{text::{Text, TextLines}, path::Path, prompt::{Prompts, Prompt}, player::{HistoryEntry, VariableEntry}};
+use crate::input::controller::VariableInputResult;
+
+use super::{text::{Text, TextLines}, path::Path, prompt::{Prompts, Prompt}, player::{HistoryEntry, VariableEntry, VariableEntries}};
 
 use anyhow::{Result, anyhow, Context};
 use serde::{Serialize, Deserialize};
@@ -90,17 +92,34 @@ impl Choice {
 		Ok(())
 	}
 
+	/// Creates a map of variable entries to use when creating a new [`HistoryEntry`].
+	/// 
+	/// If both the input result and this choice's `variables` key are [`None`], returns none.
+	/// Otherwise, returns a combined map based on which inputs are present.
+	pub fn create_variable_entries(&self, input: Option<&VariableInputResult>, variables: &Variables) -> Option<VariableEntries> {
+		let input_entry = input.map(|result| result.to_variable_entry(variables));
+		let var_entries = self.variables.clone().map(|vars| VariableEntry::from_map(&vars, variables));
+		if input_entry.is_none() && var_entries.is_none() {
+			return None;
+		}
+		let mut entries = var_entries.unwrap_or(HashMap::new());
+		if let Some((name, entry)) = input_entry {
+			entries.insert(name.clone(), entry);
+		}
+		Some(entries)
+	}
+
 	/// Constructs a [`HistoryEntry`] based on this choice object. 
 	/// 
 	/// Copies over control flags, the path based on the latest history entry, and notes and variable applications.
-	pub fn to_history_entry(&self, latest: &HistoryEntry, variables: &Variables) -> Option<Result<HistoryEntry>> {
+	pub fn to_history_entry(&self, latest: &HistoryEntry, input: Option<&VariableInputResult>, variables: &Variables) -> Option<Result<HistoryEntry>> {
 		self.jump.as_ref().map(|jump| {
 			Ok(HistoryEntry {
 				path: jump.fill(&latest.path)?,
 				display: self.display,
 				locked: self.lock,
 				notes: self.notes.clone().map(|actions| actions.apply).flatten(),
-				variables: self.variables.clone().map(|vars| VariableEntry::from_map(&vars, variables))
+				variables: self.create_variable_entries(input, variables)
 			})
 		})
 	}

@@ -179,6 +179,8 @@ impl Prompt {
     		.collect()
 	}
 
+	/// Returns a block of debug information about this prompt, 
+	/// including the ID, type, choices configuration, and other prompts that jump to this one.
 	pub fn debug_info(&self, name: &String, file: &String, prompts: &Prompts, notes: &Notes) -> String {
 		let model = self.model();
 		let choices_amt = self.choices.len();

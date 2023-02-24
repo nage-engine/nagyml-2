@@ -4,6 +4,8 @@ use anyhow::{Result, anyhow};
 use clap::Parser;
 use rustyline::Editor;
 
+use crate::core::{player::VariableEntry, choice::Variables};
+
 use super::commands::RuntimeCommand;
 
 #[derive(Debug)]
@@ -29,10 +31,18 @@ impl InputContext {
 	}
 }
 
+pub struct VariableInputResult(pub String, pub String);
+
+impl VariableInputResult {
+	pub fn to_variable_entry(&self, variables: &Variables) -> (&String, VariableEntry) {
+		(&self.0, VariableEntry::new(&self.0, &self.1, variables))
+	}
+}
+
 pub enum InputResult {
 	Quit(bool),
 	Choice(usize),
-	Variable(String, String),
+	Variable(VariableInputResult),
 	Command(Result<RuntimeCommand>)
 }
 
@@ -71,7 +81,7 @@ impl InputController {
 				}
 				Ok(InputResult::Choice(choice))
 			}
-			InputContext::Variable(name, _) => Ok(InputResult::Variable(name.clone(), line))
+			InputContext::Variable(name, _) => Ok(InputResult::Variable(VariableInputResult(name.clone(), line)))
 		}
 	}
 

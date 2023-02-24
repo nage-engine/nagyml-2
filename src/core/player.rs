@@ -3,7 +3,7 @@ use std::{collections::{HashMap, HashSet}, vec};
 use anyhow::{Result, Context, anyhow};
 use serde::{Serialize, Deserialize};
 
-use crate::loading::parse;
+use crate::{loading::parse, input::controller::VariableInputResult};
 
 use super::{path::Path, choice::{NoteApplication, Notes, Variables, NoteActions, Choice}, manifest::Entrypoint};
 
@@ -111,8 +111,9 @@ impl Player {
 	/// 
 	/// If `take` is `true`, attempts to remove the note.
 	/// Otherwise, inserts the note if not already present.
-	pub fn apply_note(&mut self, app: &NoteApplication) {
-		if app.take {
+	pub fn apply_note(&mut self, app: &NoteApplication, reverse: bool) {
+		let take = if reverse { !app.take } else { app.take };
+		if take {
 			self.notes.remove(&app.name);
 		}
 		else {
@@ -126,7 +127,7 @@ impl Player {
 	pub fn accept_note_actions(&mut self, actions: &NoteActions) {
 		if let Some(apps) = &actions.apply {
 			for app in apps {
-				self.apply_note(app);
+				self.apply_note(app, false);
 			}
 		}
 		if let Some(once) = &actions.once {
@@ -134,20 +135,51 @@ impl Player {
 		}
 	}
 
+	/// Returns the latest history entry, if any.
 	pub fn latest_entry(&self) -> Result<&HistoryEntry> {
 		self.history.last().ok_or(anyhow!("History empty"))
 	}
 
-	pub fn push_history(&mut self, choice: &Choice) -> Result<()> {
+	/// If the latest history entry is able to be reversed, pops and returns it from the entry list.
+	pub fn pop_latest_entry(player: &mut Player) -> Result<HistoryEntry> {
+		let latest = player.latest_entry()?;
+		if latest.locked {
+			return Err(anyhow!("Can't go back right now!"))
+		}
+		Ok(player.history.pop().unwrap())
+	}
+
+	/// Appends a new entry to the history data based on what happened during the last input loop.
+	/// 
+	/// There must always be at least one history entry to take modifications from. If there isn't, something has gone wrong.
+	pub fn push_history(&mut self, choice: &Choice, input: Option<&VariableInputResult>) -> Result<()> {
 		let latest = self.latest_entry()?;
-		if let Some(entry) = choice.to_history_entry(&latest, &self.variables) {
+		if let Some(entry) = choice.to_history_entry(&latest, input, &self.variables) {
 			self.history.push(entry?);
 		}
 		Ok(())
 	}
 
-	pub fn choose(&mut self, choice: &Choice) -> Result<()> {
-		self.push_history(choice)?;
+	pub fn reverse_history(&mut self) -> Result<()> {
+		let latest = Self::pop_latest_entry(self)?;
+		if let Some(apps) = &latest.notes {
+			for app in apps {
+				self.apply_note(&app, true);
+			}
+		}
+		if let Some(vars) = latest.variables {
+			for (name, variable_entry) in vars {
+				match variable_entry.previous {
+					Some(previous) => self.variables.insert(name, previous),
+					None => self.variables.remove(&name)
+				};
+			}
+		}
+		Ok(())
+	}
+
+	pub fn choose(&mut self, choice: &Choice, input: Option<&VariableInputResult>) -> Result<()> {
+		self.push_history(choice, input)?;
 		if let Some(actions) = &choice.notes {
 			self.accept_note_actions(actions);
 		}
