@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::{loading::parse, input::controller::VariableInputResult};
 
-use super::{path::Path, choice::{NoteApplication, Notes, Variables, NoteActions, Choice}, manifest::{Entrypoint, Manifest}};
+use super::{path::Path, choice::{NoteApplication, Notes, Variables, NoteActions, Choice}, manifest::Manifest};
 
 #[derive(Serialize, Deserialize, Debug)]
 /// A single variable value recording.
@@ -82,24 +82,24 @@ pub struct Player {
 impl Player {
 	const FILE: &'static str = "data.yml";
 
-	/// Constructs a player based on an entrypoint.
-	fn new(entrypoint: &Entrypoint) -> Self {
-		let entry = HistoryEntry::new(&entrypoint.path);
+	/// Constructs a player based on a [`Manifest`].
+	fn new(config: &Manifest) -> Self {
+		let entry = HistoryEntry::new(&config.entry.path);
 		Self {
 			began: false,
-			lang: String::from("en_us"),
-			notes: entrypoint.notes.clone().unwrap_or(HashSet::new()),
-			variables: entrypoint.variables.clone().unwrap_or(HashMap::new()),
+			lang: config.settings.lang.clone().unwrap_or(String::from("en_us")),
+			notes: config.entry.notes.clone().unwrap_or(HashSet::new()),
+			variables: config.entry.variables.clone().unwrap_or(HashMap::new()),
 			history: VecDeque::from(vec![entry])
 		}
 	}
 
 	/// Attempts to load player data from the local `data.yml` file. 
 	/// If this file does not exist, defaults to constructing the player data with [`Player::new`].
-	pub fn load(entrypoint: &Entrypoint) -> Result<Self> {
+	pub fn load(config: &Manifest) -> Result<Self> {
 		match std::fs::read_to_string(Self::FILE) {
 			Ok(content) => parse(Self::FILE, &content).with_context(|| "Failed to parse player data"),
-			Err(_) => Ok(Self::new(entrypoint))
+			Err(_) => Ok(Self::new(config))
 		}
 	}
 

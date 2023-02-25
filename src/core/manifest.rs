@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display};
+use std::fmt::Display;
 
 use anyhow::{Result, anyhow, Context};
 use semver::Version;
@@ -46,7 +46,8 @@ pub struct Settings {
 	pub save: bool,
 	pub debug: bool,
 	pub speed: TextSpeed,
-	pub history: HistorySettings
+	pub history: HistorySettings,
+	pub lang: Option<String>
 }
 
 impl Default for Settings {
@@ -55,7 +56,8 @@ impl Default for Settings {
 			save: true,
 			debug: false,
 			speed: TextSpeed::Delay(5),
-			history: HistorySettings::default()
+			history: HistorySettings::default(),
+			lang: None
 		}
 	}
 }

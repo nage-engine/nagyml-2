@@ -1,9 +1,9 @@
-use std::{collections::{BTreeMap, HashMap}, fmt::Display};
+use std::{collections::HashMap, fmt::Display};
 
 use anyhow::{Result, Context, anyhow};
 use serde::{Serialize, Deserialize};
 
-use crate::loading::{load, get_content_iterator, ContentFile, Contents};
+use crate::loading::{ContentFile, Contents};
 
 use super::{text::{TextLines, Text, TranslationFile}, choice::{Choices, Variables, Choice, Notes}, path::Path, manifest::Manifest};
 

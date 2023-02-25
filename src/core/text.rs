@@ -1,4 +1,4 @@
-use std::{fmt::Display, collections::HashMap};
+use std::fmt::Display;
 
 use serde::{Serialize, Deserialize};
 use snailshell::snailprint_s;
@@ -96,12 +96,6 @@ pub type TextLines = Vec<Text>;
 
 pub type TranslationFile = ContentFile<String>;
 pub type Translations = Contents<String>;
-
-/*impl Display for Text {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.mode.format(&self.content))
-    }
-}*/
 
 impl Text {
 	/// The default value for an undefined interpolation variable.

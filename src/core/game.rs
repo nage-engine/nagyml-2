@@ -22,7 +22,7 @@ pub enum InputLoopResult {
 impl Game {
 	pub fn load() -> Result<Self> {
 		let config = Manifest::load()?;
-		let player = Player::load(&config.entry)?;
+		let player = Player::load(&config)?;
 		let prompts = load_content("prompts")?;
 		let translations = load_content("lang")?;
 		let input = InputController::new()?;
