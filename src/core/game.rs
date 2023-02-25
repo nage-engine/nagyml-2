@@ -130,6 +130,10 @@ impl Game {
 			let next_prompt = Prompt::get_from_path(&self.prompts, &entry.path)?;
 			let model = next_prompt.model();
 			let choices = next_prompt.usable_choices(&self.player.notes);
+
+			if choices.is_empty() {
+				return Err(anyhow!("No usable choices"))
+			}
 			
 			next_prompt.print(&model, entry.display, &choices, &self.player.variables, &self.config, lang_file);
 
@@ -162,5 +166,15 @@ impl Game {
 		if !silent {
 			println!("Exiting...");
 		}
+	}
+
+	pub fn crash_context(&self) -> String {
+		let contact = self.config.metadata.contact.as_ref().map(|info| {
+			let strings: Vec<String> = info.iter()
+    			.map(|value| format!("- {value}"))
+				.collect();
+			format!("\n\nContact the developers:\n{}", strings.join("\n"))
+		});
+		format!("The game has crashed; it's not your fault!{}", contact.unwrap_or(String::new()))
 	}
 }

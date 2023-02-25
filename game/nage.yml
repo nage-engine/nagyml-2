@@ -3,6 +3,9 @@ metadata:
   authors:
     - acikek
   version: 0.1.0
+  contact:
+  - on Discord; the user acikek#8472
+  - by email; spiralixp@gmail.com
 
 settings:
   save: false

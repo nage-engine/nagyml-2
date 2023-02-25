@@ -15,7 +15,7 @@ pub struct Metadata {
 	name: String,
 	authors: Vec<String>,
 	version: Version,
-	contact: Option<HashMap<String, String>>
+	pub contact: Option<Vec<String>>
 }
 
 impl Display for Metadata {
