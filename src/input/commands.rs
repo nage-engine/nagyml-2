@@ -57,6 +57,57 @@ impl RuntimeCommand {
 		RuntimeCommand::Quit
 	];
 
+	/// Handles a [`Back`](RuntimeCommand::Back) command.
+	fn back(player: &mut Player) -> Result<CommandResult> {
+		if player.history.len() <= 1 {
+			return Err(anyhow!("Can't go back right now!"));
+		}
+		player.reverse_history()?;
+		Ok(CommandResult::Submit(InputLoopResult::Continue))
+	}
+
+	/// Handles a [`Lang`](RuntimeCommand::Lang) command.
+	fn lang(lang: &Option<String>, player: &mut Player, translations: &Translations) -> Result<CommandResult> {
+		use CommandResult::*;
+		let result = match lang {
+			Some(code) => {
+				if !translations.contains_key(code) {
+					return Err(anyhow!("Invalid display language"));
+				}
+				player.lang = code.clone();
+				Output(format!("Set display language to '{code}'"))
+			},
+			None => {
+				if translations.is_empty() {
+					return Err(anyhow!("No display languages loaded"));
+				}
+				Output(translations.keys().join(", "))
+			}
+		};
+		Ok(result)
+	}
+
+	/// Handles a [`Notes`](RuntimeCommand::Notes) command.
+	fn notes(player: &Player) -> Result<CommandResult> {
+		if player.notes.is_empty() {
+			return Err(anyhow!("No notes applied"))
+		}
+		let result = itertools::join(&player.notes, ", ");
+		Ok(CommandResult::Output(result))
+	}
+	
+	/// Handles a [`Variables`](RuntimeCommand::Variables) command.
+	fn variables(player: &Player) -> Result<CommandResult> {
+		if player.variables.is_empty() {
+			return Err(anyhow!("No variables applied"))
+		}
+		let vars = player.variables.clone().into_iter()
+			.map(|(name, value)| format!("{name}: {value}"))
+			.collect::<Vec<String>>()
+			.join("\n");
+		Ok(CommandResult::Output(format!("\n{vars}")))
+	}
+
 	/// Executes a runtime command if the player has permission to do so.
 	///
 	/// Any errors will be reported to the input loop with a retry following.
@@ -67,30 +118,8 @@ impl RuntimeCommand {
 		use RuntimeCommand::*;
 		use CommandResult::*;
 		let result = match self {
-			Back => {
-				if player.history.len() <= 1 {
-					return Err(anyhow!("Can't go back right now!"));
-				}
-				player.reverse_history()?;
-				Submit(InputLoopResult::Continue)
-			},
-			Lang { lang } => {
-				match lang {
-					Some(code) => {
-						if !translations.contains_key(code) {
-							return Err(anyhow!("Invalid display language"));
-						}
-						player.lang = code.clone();
-						Output(format!("Set display language to '{code}'"))
-					},
-					None => {
-						if translations.is_empty() {
-							return Err(anyhow!("No display languages loaded"));
-						}
-						Output(translations.keys().join(", "))
-					}
-				}
-			}
+			Back => Self::back(player)?,
+			Lang { lang } => Self::lang(lang, player, translations)?,
 			Save => {
 				player.save();
 				Output("Saving... ".to_owned())
@@ -105,22 +134,8 @@ impl RuntimeCommand {
 				let prompt = PromptUtil::get(prompts, name, file)?;
 				Output(prompt.debug_info(name, file, prompts, &player.notes))
 			}
-			Notes => {
-				if player.notes.is_empty() {
-					return Err(anyhow!("No notes applied"))
-				}
-				Output(itertools::join(&player.notes, ", "))
-			},
-			Variables => {
-				if player.variables.is_empty() {
-					return Err(anyhow!("No variables applied"))
-				}
-				let vars = player.variables.clone().into_iter()
-					.map(|(name, value)| format!("{name}: {value}"))
-					.collect::<Vec<String>>()
-					.join("\n");
-				Output(format!("\n{vars}"))
-			},
+			Notes => Self::notes(player)?,
+			Variables => Self::variables(player)?
 		};
 		Ok(result)
 	}
