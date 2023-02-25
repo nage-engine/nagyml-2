@@ -2,7 +2,7 @@ use anyhow::{Result, anyhow};
 use clap::Parser;
 use itertools::Itertools;
 
-use crate::core::{player::Player, prompt::{Prompts, Prompt as PromptUtil}, game::InputLoopResult, manifest::Manifest};
+use crate::core::{player::Player, prompt::{Prompts, Prompt as PromptUtil}, game::InputLoopResult, manifest::Manifest, text::Translations};
 
 #[derive(Parser, Debug, PartialEq)]
 #[command(multicall = true)]
@@ -12,6 +12,11 @@ use crate::core::{player::Player, prompt::{Prompts, Prompt as PromptUtil}, game:
 pub enum RuntimeCommand {
 	#[command(about = "Tries going back a choice")]
 	Back,
+	#[command(about = "Manages the display language")]
+	Lang {
+		#[arg(help = "The language code to switch to. If none, lists all loaded languages")]
+		lang: Option<String>
+	},
 	#[command(about = "Saves the player data")]
 	Save,
 	#[command(about = "Saves and quits the game")]
@@ -55,7 +60,7 @@ impl RuntimeCommand {
 	/// Executes a runtime command if the player has permission to do so.
 	///
 	/// Any errors will be reported to the input loop with a retry following.
-	pub fn run(&self, prompts: &Prompts, player: &mut Player, config: &Manifest) -> Result<CommandResult> {
+	pub fn run(&self, prompts: &Prompts, player: &mut Player, config: &Manifest, translations: &Translations) -> Result<CommandResult> {
 		if !Self::DEFAULT_COMMANDS.contains(&self) && !config.settings.debug {
 			return Err(anyhow!("Unable to access debug commands"));
 		}
@@ -68,6 +73,23 @@ impl RuntimeCommand {
 				}
 				player.reverse_history()?;
 				Submit(InputLoopResult::Continue)
+			},
+			Lang { lang } => {
+				match lang {
+					Some(code) => {
+						if !translations.contains_key(code) {
+							return Err(anyhow!("Invalid display language"));
+						}
+						player.lang = code.clone();
+						Output(format!("Set display language to '{code}'"))
+					},
+					None => {
+						if translations.is_empty() {
+							return Err(anyhow!("No display languages loaded"));
+						}
+						Output(translations.keys().join(", "))
+					}
+				}
 			}
 			Save => {
 				player.save();

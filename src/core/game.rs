@@ -82,7 +82,7 @@ impl Game {
 		}
 	}
 
-	pub fn take_input(input: &mut InputController, prompts: &Prompts, player: &mut Player, config: &Manifest, lang_file: Option<&TranslationFile>, choices: &Vec<&Choice>, context: &InputContext) -> Result<InputLoopResult> {
+	pub fn take_input(input: &mut InputController, prompts: &Prompts, player: &mut Player, config: &Manifest, translations: &Translations, lang_file: Option<&TranslationFile>, choices: &Vec<&Choice>, context: &InputContext) -> Result<InputLoopResult> {
 		use InputLoopResult::*;
 		let result = match input.take(context) {
 			Err(err) => {
@@ -102,7 +102,7 @@ impl Game {
 					match &parse {
 						Err(err) => println!("\n{err}"), // Clap error
 						Ok(command) => {
-							match command.run(prompts, player, config) {
+							match command.run(prompts, player, config, translations) {
 								Err(err) => println!("Error: {err}"), // Command runtime error
 								Ok(result) => {
 									match result {
@@ -148,7 +148,7 @@ impl Game {
 					let context = Self::next_input_context(&model, &choices)
         				.ok_or(anyhow!("Could not resolve input context"))?;
 					// Borrow-checker coercion; only using necessary fields in static method
-					match Self::take_input(&mut self.input, &self.prompts, &mut self.player, &self.config, lang_file, &choices, &context)? {
+					match Self::take_input(&mut self.input, &self.prompts, &mut self.player, &self.config, &self.translations, lang_file, &choices, &context)? {
 						InputLoopResult::Retry(flush) => if flush { println!() },
 						InputLoopResult::Continue => { println!(); break },
 						InputLoopResult::Shutdown(silent) => break 'outer silent
