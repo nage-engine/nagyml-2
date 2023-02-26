@@ -19,6 +19,8 @@ entry:
     prompt: ask_for_name
   background:
   - text: |-
+      <nage.game_name> v<nage.game_version> by <nage.game_authors>
+
       As you rest your eyes for what you hope is the final time, you wonder... could it have been different?
       You've seen everything, done everything there is to do in this harsh world, and you're a survivor.
       However, there is a single hesitation inside you, a loose end long forgotten; it itches away... the next morning, you set off.
