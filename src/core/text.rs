@@ -5,7 +5,7 @@ use snailshell::snailprint_s;
 
 use crate::loading::{Contents, ContentFile};
 
-use super::{choice::Variables, manifest::Manifest};
+use super::{choice::Variables, manifest::{Manifest, Metadata}};
 
 #[derive(Debug)]
 /// A string that is able to undergo template transformations based on variables or custom scripts.
@@ -66,9 +66,15 @@ impl TemplatableString {
 			.unwrap_or(&self.content)
 	}
 
-	pub fn fill(&self, variables: &Variables, lang_file: Option<&TranslationFile>) -> String {
-		let content = self.lang_file_content(lang_file);
-		Self::template(content, '<', '>', move |var| variables.get(var).map(|s| s.as_str()))
+	fn fill_variable<'a>(var: &str, variables: &'a Variables, metadata: &'a Metadata) -> Option<String> {
+		metadata.global_variable(var).or(variables.get(var).cloned())
+	}
+
+	pub fn fill(&self, context: &TextContext) -> String {
+		let content = self.lang_file_content(context.lang_file);
+		Self::template(content, '<', '>', move |var| {
+			Self::fill_variable(var, context.variables, &context.config.metadata).map(|s| s.as_str())
+		})
 	}
 }
 

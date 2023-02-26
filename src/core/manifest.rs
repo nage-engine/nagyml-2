@@ -16,6 +16,17 @@ pub struct Metadata {
 	pub contact: Option<Vec<String>>
 }
 
+impl Metadata {
+	pub fn global_variable(&self, var: &str) -> Option<String> {
+		match var {
+			"nage.game_name" => Some(self.name.clone()),
+			"nage.game_authors" => Some(self.authors.join(", ")),
+			"nage.game_version" => Some(self.version.to_string()),
+			_ => None
+		}
+	}
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(default, deny_unknown_fields)]
 pub struct HistorySettings {
