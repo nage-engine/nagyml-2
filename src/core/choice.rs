@@ -2,7 +2,7 @@ use std::{collections::{HashMap, HashSet}};
 
 use crate::input::controller::VariableInputResult;
 
-use super::{text::{Text, TextLines, TranslationFile}, path::Path, prompt::{Prompts, Prompt}, player::{HistoryEntry, VariableEntry, VariableEntries}, manifest::Manifest};
+use super::{text::{Text, TextLines, TranslationFile, TemplatableString}, path::Path, prompt::{Prompts, Prompt}, player::{HistoryEntry, VariableEntry, VariableEntries}, manifest::Manifest};
 
 use anyhow::{Result, anyhow, Context};
 use serde::{Serialize, Deserialize};
@@ -36,10 +36,10 @@ pub struct NoteActions {
 /// A list of string symbols tracked on a player.
 pub type Notes = HashSet<String>;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct VariableInput {
-	pub text: Option<String>,
+	pub text: Option<TemplatableString>,
 	#[serde(rename = "variable")]
 	pub name: String
 }
@@ -47,11 +47,11 @@ pub struct VariableInput {
 /// A map of display variables wherein the key is the variable name and the value is the variable's display.
 pub type Variables = HashMap<String, String>;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Choice {
 	pub response: Option<Text>,
-	tag: Option<String>,
+	tag: Option<TemplatableString>,
 	pub input: Option<VariableInput>,
 	pub jump: Option<Path>,
 	#[serde(default = "default_true")]
@@ -60,6 +60,7 @@ pub struct Choice {
 	pub lock: Option<bool>,
 	pub notes: Option<NoteActions>,
 	pub variables: Option<Variables>,
+	pub log: Option<TemplatableString>,
 	pub ending: Option<TextLines>
 }
 
@@ -145,21 +146,33 @@ impl Choice {
 		true
 	}
 
-	/// Constructs a [`String`] of ordered choice responses.
+	/// Fills in and formats tag content, if any.
 	/// 
-	/// The format for each choice is `i) [tag] response`.
+	/// If [`Some`], returns `[VALUE] `, trailing space included.
+	/// If [`None`], returns an empty [`String`].
+	fn tag(&self, variables: &Variables, lang_file: Option<&TranslationFile>) -> String {
+		self.tag.as_ref()
+			.map(|s| format!("[{}] ", s.fill(variables, lang_file)))
+			.unwrap_or(String::new())
+	}
+
+	/// Constructs the response line for display in the game's runtime.
+	/// 
+	/// ### Examples
+	/// 
+	/// - `1) [ROGUE] "Ain't no thief."`
+	/// - `2) Put down the sword`
+	fn response_line(&self, index: usize, variables: &Variables, lang_file: Option<&TranslationFile>) -> String {
+		let tag = self.tag(variables, lang_file);
+		let response = self.response.as_ref().unwrap().get(variables, lang_file);
+		format!("{index}) {tag}{response}")
+	}
+
+	/// Constructs a [`String`] of ordered choice responses.
 	pub fn display(choices: &Vec<&Choice>, variables: &Variables, lang_file: Option<&TranslationFile>) -> String {
 		choices.iter().enumerate()
 			.filter(|(_, choice)| choice.response.is_some())
-			.map(|(index, choice)| {
-				// Tag string - format if some, empty string if none
-				let tag = choice.tag.as_ref()
-					.map(|s| format!("[{s}] "))
-					.unwrap_or(String::new());
-				// Fill response
-				let response = choice.response.as_ref().unwrap().get(variables, lang_file);
-				format!("{}) {tag}{response}", index + 1)
-			})
+			.map(|(index, choice)| choice.response_line(index + 1, variables, lang_file))
 			.collect::<Vec<String>>()
 			.join("\n")
 	}

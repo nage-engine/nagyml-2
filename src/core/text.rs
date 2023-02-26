@@ -7,6 +7,71 @@ use crate::loading::{Contents, ContentFile};
 
 use super::{choice::Variables, manifest::Manifest};
 
+#[derive(Debug)]
+/// A string that is able to undergo template transformations based on variables or custom scripts.
+pub struct TemplatableString {
+	content: String
+}
+
+impl<'de> Deserialize<'de> for TemplatableString {
+	fn deserialize<D>(deserializer: D) -> Result<Self, D::Error> where D: serde::Deserializer<'de> {
+		let content = String::deserialize(deserializer)?;
+		Ok(TemplatableString { content })
+	}
+}
+
+impl TemplatableString {
+	/// The default value for an undefined interpolation component.
+	pub const DEFAULT_VARIABLE: &'static str = "UNDEFINED";
+
+	/// Fills a templatable string based on the input delimiter characters and a filler function.
+	/// 
+	/// If the filler function returns [`None`], yields [`TemplatableString::DEFAULT_VARIABLE`].
+	/// 
+	/// If no templating characters or variables exist, returns the input string.
+	fn template<'a, F>(content: &String, before: char, after: char, filler: F) -> String where F: Fn(&str) -> Option<&'a str> {
+		if !content.contains(before) {
+			return content.clone();
+		}
+		let mut result = String::with_capacity(content.len());
+		let mut last_opener: Option<usize> = None;
+		for (index, c) in content.char_indices() {
+			if c == before {
+				last_opener = Some(index);
+			}
+			else if c == after {
+				if let Some(lb) = last_opener {
+					let var = &content[(lb + 1)..index];
+					result.push_str(filler(var).unwrap_or(Self::DEFAULT_VARIABLE));
+					last_opener = None;
+				}
+			}
+			else {
+				if last_opener.is_none() {
+					result.push(c);
+				}
+			}
+		}
+		result
+	}
+
+	/// Attempts to retrieve a content string from the passed-in lang file.
+	/// 
+	/// Prior to formatting, the text content may represent a language key such as `some.key.here`.
+	/// It bears no difference to actual text content, but if it can be found within a lang file, that value will be used.
+	/// Thus, it is vital that the value is retrieved before any formatting is performed on the content.
+	fn lang_file_content<'a>(&'a self, lang_file: Option<&'a TranslationFile>) -> &'a String {
+		lang_file.map(|file| file.get(&self.content))
+			.flatten()
+			.unwrap_or(&self.content)
+	}
+
+	pub fn fill(&self, variables: &Variables, lang_file: Option<&TranslationFile>) -> String {
+		let content = self.lang_file_content(lang_file);
+		Self::template(content, '<', '>', move |var| variables.get(var).map(|s| s.as_str()))
+	}
+}
+
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[serde(rename_all = "snake_case")]
 /// Represents how text should be formatted disregarding its contents.
@@ -71,20 +136,20 @@ impl TextSpeed {
 		snailprint_s(content, self.rate());
 	}
 
-	/// Calls [`TextSpeed::print`] and prints a newline at the end.
-	pub fn print_nl<T>(&self, content: &T) where T: Display {
+	// Calls [`TextSpeed::print`] and prints a newline at the end.
+	/*pub fn print_nl<T>(&self, content: &T) where T: Display {
 		self.print(content);
 		println!();
-	}
+	}*/
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 /// A formattable piece of text.
 pub struct Text {
 	#[serde(rename = "text")]
 	/// The unformatted text content.
-	pub content: String,
+	pub content: TemplatableString,
 	#[serde(default)]
 	/// The mode in which the text content should be formatted upon retrieval.
 	pub mode: TextMode,
@@ -93,52 +158,16 @@ pub struct Text {
 
 /// An ordered list of text objects.
 pub type TextLines = Vec<Text>;
+/// An ordered list of text objects with a flag representing whether the last entry was of the same [`TextMode`].
+pub type SeparatedTextLines<'a> = Vec<(bool, &'a Text)>;
 
 pub type TranslationFile = ContentFile<String>;
 pub type Translations = Contents<String>;
 
 impl Text {
-	/// The default value for an undefined interpolation variable.
-	pub const DEFAULT_VARIABLE: &'static str = "UNDEFINED";
-
-	/// Fills a templated string with the provided variable map.
-	/// 
-	/// A templated variable that does not exist in the map will yield [`Text::DEFAULT_VARIABLE`].
-	/// 
-	/// If no templating characters or variables exist, returns the input string.
-	pub fn fill(content: String, variables: &Variables) -> String {
-		if !content.contains("<") || variables.is_empty() {
-			return content;
-		}
-		// Initialize with some capacity to avoid most allocations
-		let mut result = String::with_capacity(content.len());
-		let mut last_lb: Option<usize> = None;
-		for (index, c) in content.char_indices() {
-			match c {
-				'<' => last_lb = Some(index),
-				'>' => {
-					if let Some(lb) = last_lb {
-						let var = &content[(lb + 1)..index];
-						result.push_str(variables.get(var).unwrap_or(&Text::DEFAULT_VARIABLE.to_owned()));
-						last_lb = None;
-					}
-				}
-				_ => {
-					if last_lb.is_none() {
-						result.push(c);
-					}
-				}
-			}
-		}
-		result
-	}
-
-	/// Formats the text content based on its [`Mode`] and fills in any interpolation variables.
+	/// Retrieves text content with [`TemplatableString::fill`] and formats it based on the [`TextMode`].
 	pub fn get(&self, variables: &Variables, lang_file: Option<&TranslationFile>) -> String {
-		let content = lang_file.map(|file| file.get(&self.content))
-			.flatten()
-			.unwrap_or(&self.content);
-		Self::fill(self.mode.format(content), variables)
+		self.mode.format(&self.content.fill(variables, lang_file))
 	}
 
 	/// Formats and snailprints text based on its [`TextSpeed`]. 
@@ -149,13 +178,18 @@ impl Text {
 		speed.print(&self.get(variables, lang_file));
 	}
 
-	/// Formats lines of text and prints them sequentially.
-	/// 
-	/// Separates each formatted line with newlines. Between two text lines, if their text modes differ, uses two newlines; otherwise, uses one.
+	/// Calculates some [`SeparatedTextLines`] based on some text lines.
+	fn get_separated_lines<'a>(lines: &'a TextLines) -> SeparatedTextLines<'a> {
+		lines.iter().enumerate()
+    		.map(|(index, line)| (index > 0 && lines[index - 1].mode != line.mode, line))
+    		.collect()
+	}
+
+	/// Formats and separates text lines and prints them sequentially.
 	pub fn print_lines(lines: &TextLines, variables: &Variables, config: &Manifest, lang_file: Option<&TranslationFile>) {
-		for (index, line) in lines.iter().enumerate() {
-			if index > 0 && lines[index - 1].mode != line.mode {
-				println!(); // Newline
+		for (newline, line) in Self::get_separated_lines(lines) {
+			if newline {
+				println!();
 			}
 			line.print(variables, config, lang_file);
 		}
@@ -165,9 +199,5 @@ impl Text {
 	pub fn print_lines_nl(lines: &TextLines, variables: &Variables, config: &Manifest, lang_file: Option<&TranslationFile>) {
 		Self::print_lines(lines, variables, config, lang_file);
 		println!();
-	}
-
-	pub fn lang_file<'a>(translations: &'a Translations, lang: &String) -> Option<&'a TranslationFile> {
-		translations.get(lang)
 	}
 }

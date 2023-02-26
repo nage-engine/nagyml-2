@@ -1,14 +1,12 @@
-use std::fmt::Display;
-
 use anyhow::{Result, anyhow, Context};
 use semver::Version;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::loading::parse;
 
 use super::{path::Path, choice::{Variables, Notes}, text::{TextSpeed, TextLines}};
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 /// A collection of settings that identify information about the game itself and its authors.
 pub struct Metadata {
@@ -18,13 +16,7 @@ pub struct Metadata {
 	pub contact: Option<Vec<String>>
 }
 
-impl Display for Metadata {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-		write!(f, "{} v{} by {}", self.name, self.version, self.authors.join(", "))
-	}
-}
-
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(default, deny_unknown_fields)]
 pub struct HistorySettings {
 	pub locked: bool,
@@ -40,7 +32,7 @@ impl Default for HistorySettings {
 	}
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(default, deny_unknown_fields)]
 pub struct Settings {
 	pub save: bool,
@@ -62,7 +54,7 @@ impl Default for Settings {
 	}
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Entrypoint {
 	pub path: Path,
@@ -71,7 +63,7 @@ pub struct Entrypoint {
 	pub variables: Option<Variables>
 }
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Manifest {
 	pub metadata: Metadata,

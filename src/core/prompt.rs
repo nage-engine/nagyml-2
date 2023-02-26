@@ -1,13 +1,13 @@
 use std::{collections::HashMap, fmt::Display};
 
 use anyhow::{Result, Context, anyhow};
-use serde::{Serialize, Deserialize};
+use serde::Deserialize;
 
 use crate::loading::{ContentFile, Contents};
 
-use super::{text::{TextLines, Text, TranslationFile}, choice::{Choices, Variables, Choice, Notes}, path::Path, manifest::Manifest};
+use super::{text::{TextLines, Text, TranslationFile, TemplatableString}, choice::{Choices, Variables, Choice, Notes}, path::Path, manifest::Manifest};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 /// The standard gameplay container to which a player visits during a playthrough.
 /// 
@@ -22,7 +22,7 @@ pub struct Prompt {
 /// A prompt's overarching function based on its choices.
 pub enum PromptModel<'a> {
 	/// Has one choice. This choice has an `input` field.
-	Input(&'a String, Option<&'a String>),
+	Input(&'a String, Option<&'a TemplatableString>),
 	/// A normal prompt-choice container model.
 	Response,
 	/// Has one choice. This choice lacks response or input; immediately jumps to another prompt.
