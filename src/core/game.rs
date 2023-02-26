@@ -77,9 +77,7 @@ impl Game {
 		}
 	}
 
-	pub fn take_input(input: &mut InputController, prompts: &Prompts, player: &mut Player, 
-					  config: &Manifest, translations: &Translations, lang_file: Option<&TranslationFile>, 
-					  choices: &Vec<&Choice>, context: &InputContext) -> Result<InputLoopResult> {
+	pub fn take_input(input: &mut InputController, prompts: &Prompts, player: &mut Player, config: &Manifest, translations: &Translations, lang_file: Option<&TranslationFile>, choices: &Vec<&Choice>, context: &InputContext) -> Result<InputLoopResult> {
 		use InputLoopResult::*;
 		let result = match input.take(context) {
 			Err(err) => {
