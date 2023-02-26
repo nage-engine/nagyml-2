@@ -120,11 +120,11 @@ impl Prompt {
 	pub fn print(&self, model: &PromptModel, display: bool, usable_choices: &Vec<&Choice>, variables: &Variables, config: &Manifest, lang_file: Option<&TranslationFile>) {
 		if display {
 			if let Some(lines) = &self.text {
-				Text::print_lines_nl(lines, variables, config, lang_file);
+				Text::print_lines_nl(lines, variables, lang_file, config);
 			}
 		}
 		if let PromptModel::Response = model {
-			println!("{}\n", Choice::display(usable_choices, variables, lang_file));
+			println!("{}\n", Choice::display(usable_choices, variables, lang_file, config));
 		}
 	}
 

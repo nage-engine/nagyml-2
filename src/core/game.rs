@@ -41,7 +41,7 @@ impl Game {
 	pub fn init(&mut self) {
 		if let Some(background) = &self.config.entry.background {
 			let lang_file = self.translations.get(&self.player.lang);
-			Text::print_lines_nl(background, &self.player.variables, &self.config, lang_file);
+			Text::print_lines_nl(background, &self.player.variables, lang_file, &self.config);
 		}
 		self.player.began = true;
 	}
@@ -62,17 +62,17 @@ impl Game {
 		player.choose(choice, None, config)?;
 		if let Some(ending) = &choice.ending {
 			println!();
-			Text::print_lines(ending, &player.variables, &config, lang_file);
+			Text::print_lines(ending, &player.variables, lang_file, config);
 			return Ok(Shutdown(true));
 		}
 		Ok(Continue)
 	}
 
-	pub fn next_input_context(model: &PromptModel, choices: &Vec<&Choice>, variables: &Variables, lang_file: Option<&TranslationFile>) -> Option<InputContext> {
+	pub fn next_input_context(model: &PromptModel, choices: &Vec<&Choice>, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest) -> Option<InputContext> {
 		use PromptModel::*;
 		match model {
 			Response => Some(InputContext::Choices(choices.len())),
-			&Input(name, prompt) => Some(InputContext::Variable(name.clone(), prompt.map(|s| s.fill(variables, lang_file)))),
+			&Input(name, prompt) => Some(InputContext::Variable(name.clone(), prompt.map(|s| s.fill(variables, lang_file, config)))),
 			_ => None
 		}
 	}
@@ -137,11 +137,11 @@ impl Game {
 			match model {
 				PromptModel::Redirect(choice) => self.player.choose(choice, None, &self.config)?,
 				PromptModel::Ending(lines) => {
-					Text::print_lines(lines, &self.player.variables, &self.config, lang_file);
+					Text::print_lines(lines, &self.player.variables, lang_file, &self.config);
 					break 'outer true
 				},
 				_ => loop {
-					let context = Self::next_input_context(&model, &choices, &self.player.variables, lang_file)
+					let context = Self::next_input_context(&model, &choices, &self.player.variables, lang_file, &self.config)
         				.ok_or(anyhow!("Could not resolve input context"))?;
 					// Borrow-checker coercion; only using necessary fields in static method
 					match Self::take_input(&mut self.input, &self.prompts, &mut self.player, &self.config, &self.translations, lang_file, &choices, &context)? {

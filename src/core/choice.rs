@@ -150,9 +150,9 @@ impl Choice {
 	/// 
 	/// If [`Some`], returns `[VALUE] `, trailing space included.
 	/// If [`None`], returns an empty [`String`].
-	fn tag(&self, variables: &Variables, lang_file: Option<&TranslationFile>) -> String {
+	fn tag(&self, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest) -> String {
 		self.tag.as_ref()
-			.map(|s| format!("[{}] ", s.fill(variables, lang_file)))
+			.map(|s| format!("[{}] ", s.fill(variables, lang_file, config)))
 			.unwrap_or(String::new())
 	}
 
@@ -162,17 +162,17 @@ impl Choice {
 	/// 
 	/// - `1) [ROGUE] "Ain't no thief."`
 	/// - `2) Put down the sword`
-	fn response_line(&self, index: usize, variables: &Variables, lang_file: Option<&TranslationFile>) -> String {
-		let tag = self.tag(variables, lang_file);
-		let response = self.response.as_ref().unwrap().get(variables, lang_file);
+	fn response_line(&self, index: usize, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest) -> String {
+		let tag = self.tag(variables, lang_file, config);
+		let response = self.response.as_ref().unwrap().get(variables, lang_file, config);
 		format!("{index}) {tag}{response}")
 	}
 
 	/// Constructs a [`String`] of ordered choice responses.
-	pub fn display(choices: &Vec<&Choice>, variables: &Variables, lang_file: Option<&TranslationFile>) -> String {
+	pub fn display(choices: &Vec<&Choice>, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest) -> String {
 		choices.iter().enumerate()
 			.filter(|(_, choice)| choice.response.is_some())
-			.map(|(index, choice)| choice.response_line(index + 1, variables, lang_file))
+			.map(|(index, choice)| choice.response_line(index + 1, variables, lang_file, config))
 			.collect::<Vec<String>>()
 			.join("\n")
 	}

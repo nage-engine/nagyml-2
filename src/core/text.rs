@@ -29,7 +29,7 @@ impl TemplatableString {
 	/// If the filler function returns [`None`], yields [`TemplatableString::DEFAULT_VARIABLE`].
 	/// 
 	/// If no templating characters or variables exist, returns the input string.
-	fn template<'a, F>(content: &String, before: char, after: char, filler: F) -> String where F: Fn(&str) -> Option<&'a str> {
+	fn template<'a, F>(content: &String, before: char, after: char, filler: F) -> String where F: Fn(&str) -> Option<String> {
 		if !content.contains(before) {
 			return content.clone();
 		}
@@ -42,7 +42,7 @@ impl TemplatableString {
 			else if c == after {
 				if let Some(lb) = last_opener {
 					let var = &content[(lb + 1)..index];
-					result.push_str(filler(var).unwrap_or(Self::DEFAULT_VARIABLE));
+					result.push_str(&filler(var).unwrap_or(Self::DEFAULT_VARIABLE.to_owned()));
 					last_opener = None;
 				}
 			}
@@ -70,10 +70,10 @@ impl TemplatableString {
 		metadata.global_variable(var).or(variables.get(var).cloned())
 	}
 
-	pub fn fill(&self, context: &TextContext) -> String {
-		let content = self.lang_file_content(context.lang_file);
+	pub fn fill(&self, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest) -> String {
+		let content = self.lang_file_content(lang_file);
 		Self::template(content, '<', '>', move |var| {
-			Self::fill_variable(var, context.variables, &context.config.metadata).map(|s| s.as_str())
+			Self::fill_variable(var, variables, &config.metadata).map(|s| s.clone())
 		})
 	}
 }
@@ -172,16 +172,16 @@ pub type Translations = Contents<String>;
 
 impl Text {
 	/// Retrieves text content with [`TemplatableString::fill`] and formats it based on the [`TextMode`].
-	pub fn get(&self, variables: &Variables, lang_file: Option<&TranslationFile>) -> String {
-		self.mode.format(&self.content.fill(variables, lang_file))
+	pub fn get(&self, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest) -> String {
+		self.mode.format(&self.content.fill(variables, lang_file, config))
 	}
 
 	/// Formats and snailprints text based on its [`TextSpeed`]. 
 	/// 
 	/// If the text object does not contain a `speed` field, defaults to the provided config settings.
-	pub fn print(&self, variables: &Variables, config: &Manifest, lang_file: Option<&TranslationFile>) {
+	pub fn print(&self, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest) {
 		let speed = self.speed.as_ref().unwrap_or(&config.settings.speed);
-		speed.print(&self.get(variables, lang_file));
+		speed.print(&self.get(variables, lang_file, config));
 	}
 
 	/// Calculates some [`SeparatedTextLines`] based on some text lines.
@@ -192,18 +192,18 @@ impl Text {
 	}
 
 	/// Formats and separates text lines and prints them sequentially.
-	pub fn print_lines(lines: &TextLines, variables: &Variables, config: &Manifest, lang_file: Option<&TranslationFile>) {
+	pub fn print_lines(lines: &TextLines, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest, ) {
 		for (newline, line) in Self::get_separated_lines(lines) {
 			if newline {
 				println!();
 			}
-			line.print(variables, config, lang_file);
+			line.print(variables, lang_file, config);
 		}
 	}
 
 	/// Calls [`Text::print_lines`] and prints a newline at the end.
-	pub fn print_lines_nl(lines: &TextLines, variables: &Variables, config: &Manifest, lang_file: Option<&TranslationFile>) {
-		Self::print_lines(lines, variables, config, lang_file);
+	pub fn print_lines_nl(lines: &TextLines, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest, ) {
+		Self::print_lines(lines, variables, lang_file, config);
 		println!();
 	}
 }
