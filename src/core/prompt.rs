@@ -91,6 +91,16 @@ impl Prompt {
 			.collect()
 	}
 
+	/// Validates all prompts in a [`Prompts`] map.
+	pub fn validate_all(prompts: &Prompts) -> Result<()> {
+		for (file_name, prompt_file) in prompts {
+			for (name, prompt) in prompt_file {
+				let _ = prompt.validate(name, file_name, prompts)?;
+			}
+		}
+		Ok(())
+	}
+
 	/// Returns the [`PromptModel`] based on this prompt's choices. See the enum's fields for criteria.
 	pub fn model(&self) -> PromptModel {
 		use PromptModel::*;

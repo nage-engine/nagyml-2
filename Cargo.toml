@@ -17,3 +17,4 @@ ctrlc = "3.2.5"
 rustyline = "10.1.1"
 clap = { version = "4.1.6", features = [ "derive" ] }
 itertools = "0.10.5"
+rlua = "0.19.4"

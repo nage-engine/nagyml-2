@@ -29,9 +29,9 @@ impl TemplatableString {
 	/// If the filler function returns [`None`], yields [`TemplatableString::DEFAULT_VARIABLE`].
 	/// 
 	/// If no templating characters or variables exist, returns the input string.
-	fn template<'a, F>(content: &String, before: char, after: char, filler: F) -> String where F: Fn(&str) -> Option<String> {
+	fn template<'a, F>(content: &str, before: char, after: char, filler: F) -> String where F: Fn(&str) -> Option<String> {
 		if !content.contains(before) {
-			return content.clone();
+			return content.to_owned();
 		}
 		let mut result = String::with_capacity(content.len());
 		let mut last_opener: Option<usize> = None;
@@ -99,11 +99,11 @@ impl TextMode {
 	/// Formats a [`String`] based on the selected text mode.
 	/// 
 	/// See [`Mode`] types to view how a text mode will format content.
-	pub fn format(&self, text: &String) -> String {
+	pub fn format(&self, text: &str) -> String {
 		use TextMode::*;
 		match self {
 			Dialogue => format!("\"{text}\""),
-			Action => text.clone()
+			Action => text.to_owned()
 		}
 	}
 }

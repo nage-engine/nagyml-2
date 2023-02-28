@@ -1,4 +1,4 @@
-use std::{path::PathBuf, collections::BTreeMap};
+use std::{path::PathBuf, collections::{BTreeMap, HashMap}};
 
 use anyhow::{Result, Context};
 use format_serde_error::SerdeError;
@@ -39,6 +39,13 @@ pub fn get_content_iterator(path: &str) -> impl Iterator<Item = (PathBuf, String
 			let key_path = file_path.strip_prefix(&prefix).unwrap().with_extension("");
 			(file_path, key_path.as_os_str().to_str().unwrap().to_owned())
 		})
+}
+
+/// Iterates over files using [`get_content_iterator`], reads them, and combines their content into a [`String`] map.
+pub fn load_files(path: &str) -> Result<HashMap<String, String>> {
+	get_content_iterator(path)
+    	.map(|(path, key)| Ok((key, std::fs::read_to_string(path)?)))
+    	.collect()
 }
 
 /// Iterates over content files using [`get_content_iterator`] and combines them into a [`Contents`] map.

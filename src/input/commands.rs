@@ -2,7 +2,7 @@ use anyhow::{Result, anyhow};
 use clap::Parser;
 use itertools::Itertools;
 
-use crate::core::{player::Player, prompt::{Prompts, Prompt as PromptUtil}, game::InputLoopResult, manifest::Manifest, text::Translations};
+use crate::{core::{player::Player, prompt::Prompt as PromptUtil, manifest::Manifest, text::Translations}, game::{gloop::GameLoopResult, main::Resources}};
 
 #[derive(Parser, Debug, PartialEq)]
 #[command(multicall = true)]
@@ -44,7 +44,7 @@ pub enum RuntimeCommand {
 /// The result of a runtime command.
 pub enum CommandResult {
 	/// Returns an input loop result to the original input call.
-	Submit(InputLoopResult),
+	Submit(GameLoopResult),
 	/// Outputs a specified string and submits [`Retry`](InputLoopResult::Retry).
 	Output(String)
 }
@@ -63,7 +63,7 @@ impl RuntimeCommand {
 			return Err(anyhow!("Can't go back right now!"));
 		}
 		player.reverse_history()?;
-		Ok(CommandResult::Submit(InputLoopResult::Continue))
+		Ok(CommandResult::Submit(GameLoopResult::Continue))
 	}
 
 	/// Handles a [`Lang`](RuntimeCommand::Lang) command.
@@ -111,7 +111,7 @@ impl RuntimeCommand {
 	/// Executes a runtime command if the player has permission to do so.
 	///
 	/// Any errors will be reported to the input loop with a retry following.
-	pub fn run(&self, prompts: &Prompts, player: &mut Player, config: &Manifest, translations: &Translations) -> Result<CommandResult> {
+	pub fn run(&self, config: &Manifest, player: &mut Player, resources: &Resources) -> Result<CommandResult> {
 		if !Self::DEFAULT_COMMANDS.contains(&self) && !config.settings.debug {
 			return Err(anyhow!("Unable to access debug commands"));
 		}
@@ -119,20 +119,20 @@ impl RuntimeCommand {
 		use CommandResult::*;
 		let result = match self {
 			Back => Self::back(player)?,
-			Lang { lang } => Self::lang(lang, player, translations)?,
+			Lang { lang } => Self::lang(lang, player, &resources.translations)?,
 			Save => {
 				player.save();
 				Output("Saving... ".to_owned())
 			}
-			Quit => Submit(InputLoopResult::Shutdown(false)),
-			Files => Output(prompts.keys().join(", ")),
+			Quit => Submit(GameLoopResult::Shutdown(false)),
+			Files => Output(resources.prompts.keys().join(", ")),
 			Prompts { file } => {
-				let prompt_file = PromptUtil::get_file(prompts, file)?;
+				let prompt_file = PromptUtil::get_file(&resources.prompts, file)?;
 				Output(prompt_file.keys().join(", "))
 			},
 			Prompt { file, name } => {
-				let prompt = PromptUtil::get(prompts, name, file)?;
-				Output(prompt.debug_info(name, file, prompts, &player.notes))
+				let prompt = PromptUtil::get(&resources.prompts, name, file)?;
+				Output(prompt.debug_info(name, file, &resources.prompts, &player.notes))
 			}
 			Notes => Self::notes(player)?,
 			Variables => Self::variables(player)?
