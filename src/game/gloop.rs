@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use crate::{core::{player::Player, manifest::Manifest, text::{TranslationFile, Text}, choice::{Choice, Variables}, prompt::PromptModel}, input::{controller::{InputContext, InputController, InputResult}, commands::{RuntimeCommand, CommandResult}}};
+use crate::{core::{player::Player, manifest::Manifest, text::{Text, TextContext}, choice::Choice, prompt::PromptModel}, input::{controller::{InputContext, InputController, InputResult}, commands::{RuntimeCommand, CommandResult}}};
 
 use super::main::Resources;
 
@@ -21,12 +21,12 @@ pub fn handle_quit(shutdown: bool) -> GameLoopResult {
 	}
 }
 
-pub fn handle_choice(config: &Manifest, player: &mut Player, lang_file: Option<&TranslationFile>, choice: &Choice) -> Result<GameLoopResult> {
+pub fn handle_choice(choice: &Choice, config: &Manifest, player: &mut Player, text_context: &TextContext) -> Result<GameLoopResult> {
 	use GameLoopResult::*;
 	player.choose(choice, None, config)?;
 	if let Some(ending) = &choice.ending {
 		println!();
-		Text::print_lines(ending, &player.variables, lang_file, config);
+		Text::print_lines(ending, text_context);
 		return Ok(Shutdown(true));
 	}
 	Ok(Continue)
@@ -50,7 +50,7 @@ pub fn handle_command(parse: Result<RuntimeCommand>, config: &Manifest, player: 
 	Ok(GameLoopResult::Retry(parse.is_ok()))
 }
 
-pub fn take_input(input: &mut InputController, context: &InputContext, config: &Manifest, player: &mut Player, resources: &Resources, lang_file: Option<&TranslationFile>, choices: &Vec<&Choice>) -> Result<GameLoopResult> {
+pub fn take_input(input: &mut InputController, context: &InputContext, config: &Manifest, player: &mut Player, resources: &Resources, text_context: &TextContext, choices: &Vec<&Choice>) -> Result<GameLoopResult> {
 	use GameLoopResult::*;
 	let result = match input.take(context) {
 		Err(err) => {
@@ -59,7 +59,7 @@ pub fn take_input(input: &mut InputController, context: &InputContext, config: &
 		},
 		Ok(result) => match result {
 			InputResult::Quit(shutdown) => handle_quit(shutdown),
-			InputResult::Choice(i) => handle_choice(config, player, lang_file, choices[i - 1])?,
+			InputResult::Choice(i) => handle_choice(choices[i - 1], config, player, text_context)?,
 			InputResult::Variable(result) => {
 				// Modify variables after the choose call since history entries are sensitive to this order
 				player.choose(choices[0], Some(&result), config)?;
@@ -72,11 +72,11 @@ pub fn take_input(input: &mut InputController, context: &InputContext, config: &
 	Ok(result)
 }
 
-pub fn next_input_context(model: &PromptModel, choices: &Vec<&Choice>, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest) -> Option<InputContext> {
+pub fn next_input_context(model: &PromptModel, choices: &Vec<&Choice>, text_context: &TextContext) -> Option<InputContext> {
 	use PromptModel::*;
 	match model {
 		Response => Some(InputContext::Choices(choices.len())),
-		&Input(name, prompt) => Some(InputContext::Variable(name.clone(), prompt.map(|s| s.fill(variables, lang_file, config)))),
+		&Input(name, prompt) => Some(InputContext::Variable(name.clone(), prompt.map(|s| s.fill(text_context)))),
 		_ => None
 	}
 }

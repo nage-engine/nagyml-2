@@ -2,7 +2,7 @@ use std::{collections::{HashMap, HashSet}};
 
 use crate::input::controller::VariableInputResult;
 
-use super::{text::{Text, TextLines, TranslationFile, TemplatableString}, path::Path, prompt::{Prompts, Prompt}, player::{HistoryEntry, VariableEntry, VariableEntries}, manifest::Manifest};
+use super::{text::{Text, TextLines, TemplatableString, TextContext}, path::Path, prompt::{Prompts, Prompt}, player::{HistoryEntry, VariableEntry, VariableEntries}, manifest::Manifest};
 
 use anyhow::{Result, anyhow, Context};
 use serde::{Serialize, Deserialize};
@@ -150,9 +150,9 @@ impl Choice {
 	/// 
 	/// If [`Some`], returns `[VALUE] `, trailing space included.
 	/// If [`None`], returns an empty [`String`].
-	fn tag(&self, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest) -> String {
+	fn tag(&self, text_context: &TextContext) -> String {
 		self.tag.as_ref()
-			.map(|s| format!("[{}] ", s.fill(variables, lang_file, config)))
+			.map(|s| format!("[{}] ", s.fill(text_context)))
 			.unwrap_or(String::new())
 	}
 
@@ -162,17 +162,17 @@ impl Choice {
 	/// 
 	/// - `1) [ROGUE] "Ain't no thief."`
 	/// - `2) Put down the sword`
-	fn response_line(&self, index: usize, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest) -> String {
-		let tag = self.tag(variables, lang_file, config);
-		let response = self.response.as_ref().unwrap().get(variables, lang_file, config);
+	fn response_line(&self, index: usize, text_context: &TextContext) -> String {
+		let tag = self.tag(text_context);
+		let response = self.response.as_ref().unwrap().get(text_context);
 		format!("{index}) {tag}{response}")
 	}
 
 	/// Constructs a [`String`] of ordered choice responses.
-	pub fn display(choices: &Vec<&Choice>, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest) -> String {
+	pub fn display(choices: &Vec<&Choice>, text_context: &TextContext) -> String {
 		choices.iter().enumerate()
 			.filter(|(_, choice)| choice.response.is_some())
-			.map(|(index, choice)| choice.response_line(index + 1, variables, lang_file, config))
+			.map(|(index, choice)| choice.response_line(index + 1, text_context))
 			.collect::<Vec<String>>()
 			.join("\n")
 	}

@@ -3,9 +3,27 @@ use std::fmt::Display;
 use serde::{Serialize, Deserialize};
 use snailshell::snailprint_s;
 
-use crate::loading::{Contents, ContentFile};
+use crate::{loading::{Contents, ContentFile}, game::main::{Scripts, Resources}};
 
 use super::{choice::Variables, manifest::{Manifest, Metadata}};
+
+pub struct TextContext<'a> {
+	config: &'a Manifest,
+	variables: Variables,
+	lang_file: Option<&'a TranslationFile>,
+	scripts: &'a Scripts
+}
+
+impl<'a> TextContext<'a> {
+	pub fn new(config: &'a Manifest, variables: Variables, lang: &str, resources: &'a Resources) -> Self {
+		TextContext { 
+			config, 
+			variables, 
+			lang_file: resources.lang_file(lang), 
+			scripts: &resources.scripts 
+		}
+	}
+}
 
 #[derive(Debug)]
 /// A string that is able to undergo template transformations based on variables or custom scripts.
@@ -70,10 +88,10 @@ impl TemplatableString {
 		metadata.global_variable(var).or(variables.get(var).cloned())
 	}
 
-	pub fn fill(&self, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest) -> String {
-		let content = self.lang_file_content(lang_file);
+	pub fn fill(&self, context: &TextContext) -> String {
+		let content = self.lang_file_content(context.lang_file);
 		Self::template(content, '<', '>', move |var| {
-			Self::fill_variable(var, variables, &config.metadata).map(|s| s.clone())
+			Self::fill_variable(var, &context.variables, &context.config.metadata).map(|s| s.clone())
 		})
 	}
 }
@@ -172,16 +190,16 @@ pub type Translations = Contents<String>;
 
 impl Text {
 	/// Retrieves text content with [`TemplatableString::fill`] and formats it based on the [`TextMode`].
-	pub fn get(&self, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest) -> String {
-		self.mode.format(&self.content.fill(variables, lang_file, config))
+	pub fn get(&self, context: &TextContext) -> String {
+		self.mode.format(&self.content.fill(context))
 	}
 
 	/// Formats and snailprints text based on its [`TextSpeed`]. 
 	/// 
 	/// If the text object does not contain a `speed` field, defaults to the provided config settings.
-	pub fn print(&self, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest) {
-		let speed = self.speed.as_ref().unwrap_or(&config.settings.speed);
-		speed.print(&self.get(variables, lang_file, config));
+	pub fn print(&self, context: &TextContext) {
+		let speed = self.speed.as_ref().unwrap_or(&context.config.settings.speed);
+		speed.print(&self.get(context));
 	}
 
 	/// Calculates some [`SeparatedTextLines`] based on some text lines.
@@ -192,18 +210,18 @@ impl Text {
 	}
 
 	/// Formats and separates text lines and prints them sequentially.
-	pub fn print_lines(lines: &TextLines, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest, ) {
+	pub fn print_lines(lines: &TextLines, context: &TextContext) {
 		for (newline, line) in Self::get_separated_lines(lines) {
 			if newline {
 				println!();
 			}
-			line.print(variables, lang_file, config);
+			line.print(context);
 		}
 	}
 
 	/// Calls [`Text::print_lines`] and prints a newline at the end.
-	pub fn print_lines_nl(lines: &TextLines, variables: &Variables, lang_file: Option<&TranslationFile>, config: &Manifest, ) {
-		Self::print_lines(lines, variables, lang_file, config);
+	pub fn print_lines_nl(lines: &TextLines, context: &TextContext) {
+		Self::print_lines(lines, context);
 		println!();
 	}
 }

@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 use crate::loading::{ContentFile, Contents};
 
-use super::{text::{TextLines, Text, TranslationFile, TemplatableString}, choice::{Choices, Variables, Choice, Notes}, path::Path, manifest::Manifest};
+use super::{text::{TextLines, Text, TemplatableString, TextContext}, choice::{Choices, Choice, Notes}, path::Path};
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -127,14 +127,14 @@ impl Prompt {
 	}
 
 	/// Prints the prompt text, if any, and the choices display, if any are responses.
-	pub fn print(&self, model: &PromptModel, display: bool, usable_choices: &Vec<&Choice>, variables: &Variables, config: &Manifest, lang_file: Option<&TranslationFile>) {
+	pub fn print(&self, model: &PromptModel, display: bool, usable_choices: &Vec<&Choice>, text_context: &TextContext) {
 		if display {
 			if let Some(lines) = &self.text {
-				Text::print_lines_nl(lines, variables, lang_file, config);
+				Text::print_lines_nl(lines, text_context);
 			}
 		}
 		if let PromptModel::Response = model {
-			println!("{}\n", Choice::display(usable_choices, variables, lang_file, config));
+			println!("{}\n", Choice::display(usable_choices, text_context));
 		}
 	}
 
