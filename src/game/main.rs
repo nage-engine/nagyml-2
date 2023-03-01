@@ -1,13 +1,19 @@
+use std::collections::{HashMap, HashSet};
+
 use anyhow::{Result, anyhow};
 
-use crate::{input::controller::InputController, loading::load_content, core::{prompt::{Prompts, Prompt, PromptModel}, text::{Translations, Text, TextContext, TranslationFile}, manifest::Manifest, player::Player, scripts::Scripts}};
+use crate::{input::controller::InputController, loading::{load_content, load_files}, core::{prompt::{Prompts, Prompt, PromptModel}, text::{Translations, Text, TextContext, TranslationFile}, manifest::Manifest, player::Player, scripts::Scripts}};
 
 use super::gloop::{next_input_context, take_input, GameLoopResult};
+
+pub type InfoPages = HashMap<String, String>;
+pub type UnlockedInfoPages = HashSet<String>;
 
 #[derive(Debug)]
 pub struct Resources {
 	pub prompts: Prompts,
 	pub translations: Translations,
+	pub info_pages: InfoPages,
 	pub scripts: Scripts
 }
 
@@ -16,6 +22,7 @@ impl Resources {
 		let result = Resources {
 			prompts: load_content("prompts")?,
 			translations: load_content("lang")?,
+			info_pages: load_files("info")?,
 			scripts: Scripts::load()?
 		};
 		Ok(result)

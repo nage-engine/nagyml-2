@@ -2,13 +2,10 @@ use anyhow::{Result, anyhow};
 use clap::Parser;
 use itertools::Itertools;
 
-use crate::{core::{player::Player, prompt::Prompt as PromptUtil, manifest::Manifest, text::{Translations, TextContext}}, game::{gloop::GameLoopResult, main::Resources}};
+use crate::{core::{player::Player, prompt::Prompt as PromptUtil, manifest::Manifest, text::{Translations, TextContext}}, game::{gloop::GameLoopResult, main::{Resources, UnlockedInfoPages, InfoPages}}};
 
 #[derive(Parser, Debug, PartialEq)]
 #[command(multicall = true)]
-/// The commands used for the runtime REPL.
-/// 
-/// Debug commands are hidden from the `help` output.
 pub enum RuntimeCommand {
 	#[command(about = "Tries going back a choice")]
 	Back,
@@ -16,6 +13,11 @@ pub enum RuntimeCommand {
 	Lang {
 		#[arg(help = "The language code to switch to. If none, lists all loaded languages")]
 		lang: Option<String>
+	},
+	#[command(about = "Manages info pages")]
+	Info {
+		#[arg(help = "The info page to display. If none, lists all unlocked info pages")]
+		info: Option<String>
 	},
 	#[command(about = "Saves the player data")]
 	Save,
@@ -50,12 +52,15 @@ pub enum CommandResult {
 }
 
 impl RuntimeCommand {
-	/// The commands allowed in a default, non-debug environment.
-	pub const DEFAULT_COMMANDS: [RuntimeCommand; 3] = [
-		RuntimeCommand::Back, 
-		RuntimeCommand::Save, 
-		RuntimeCommand::Quit
-	];
+	/// Determines if this command is allowed in a default, non-debug environment.
+	fn is_normal(&self) -> bool {
+		use RuntimeCommand::*;
+		match self {
+			Back | Save | Quit => true,
+			Lang { lang: _ } => true,
+			_ => false
+		}
+	}
 
 	/// Handles a [`Back`](RuntimeCommand::Back) command.
 	fn back(player: &mut Player) -> Result<CommandResult> {
@@ -87,6 +92,28 @@ impl RuntimeCommand {
 		Ok(result)
 	}
 
+	/// Handles an [`Info`](RuntimeCommand::Info) command.
+	fn info(info: &Option<String>, unlocked_pages: &UnlockedInfoPages, pages: &InfoPages) -> Result<CommandResult> {
+		use CommandResult::*;
+		match info {
+			Some(key) => {
+				if !unlocked_pages.contains(key) {
+					return Err(anyhow!("Invalid info page"))
+				}
+				let page = pages.get(key).unwrap();
+				println!();
+				termimad::print_text(page);
+			},
+			None => {
+				if unlocked_pages.is_empty() {
+					return Err(anyhow!("No info pages unlocked"))
+				}
+				return Ok(Output(itertools::join(unlocked_pages, ", ")))
+			}
+		}
+		Ok(CommandResult::Submit(GameLoopResult::Retry(true)))
+	}
+
 	/// Handles a [`Notes`](RuntimeCommand::Notes) command.
 	fn notes(player: &Player) -> Result<CommandResult> {
 		if player.notes.is_empty() {
@@ -112,7 +139,7 @@ impl RuntimeCommand {
 	///
 	/// Any errors will be reported to the input loop with a retry following.
 	pub fn run(&self, config: &Manifest, player: &mut Player, resources: &Resources, text_context: &TextContext) -> Result<CommandResult> {
-		if !Self::DEFAULT_COMMANDS.contains(&self) && !config.settings.debug {
+		if !self.is_normal() && !config.settings.debug {
 			return Err(anyhow!("Unable to access debug commands"));
 		}
 		use RuntimeCommand::*;
@@ -120,6 +147,7 @@ impl RuntimeCommand {
 		let result = match self {
 			Back => Self::back(player)?,
 			Lang { lang } => Self::lang(lang, player, &resources.translations)?,
+			Info { info } => Self::info(info, &player.info_pages, &resources.info_pages)?,
 			Save => {
 				player.save();
 				Output("Saving... ".to_owned())

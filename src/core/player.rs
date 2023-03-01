@@ -3,7 +3,7 @@ use std::{collections::{HashMap, HashSet, VecDeque}, vec};
 use anyhow::{Result, Context, anyhow};
 use serde::{Serialize, Deserialize};
 
-use crate::{loading::parse, input::controller::VariableInputResult};
+use crate::{loading::parse, input::controller::VariableInputResult, game::main::UnlockedInfoPages};
 
 use super::{path::Path, choice::{NoteApplication, Notes, Variables, NoteActions, Choice}, manifest::Manifest, text::TextContext};
 
@@ -93,6 +93,7 @@ pub struct Player {
 	pub notes: Notes,
 	/// The player's current variables.
 	pub variables: Variables,
+	pub info_pages: UnlockedInfoPages,
 	/// Recordings of each prompt jump and their associated value changes.
 	pub history: VecDeque<HistoryEntry>
 }
@@ -108,6 +109,7 @@ impl Player {
 			lang: config.settings.lang.clone().unwrap_or(String::from("en_us")),
 			notes: config.entry.notes.clone().unwrap_or(HashSet::new()),
 			variables: config.entry.variables.clone().unwrap_or(HashMap::new()),
+			info_pages: config.entry.info_pages.clone().unwrap_or(HashSet::new()),
 			history: VecDeque::from(vec![entry])
 		}
 	}
@@ -212,6 +214,11 @@ impl Player {
 		}
 		if let Some(variables) = &choice.variables {
 			self.variables.extend(variables.clone());
+		}
+		if let Some(pages) = &choice.info {
+			for page in pages {
+				self.info_pages.insert(page.fill(text_context)?);
+			}
 		}
 		Ok(())
 	}

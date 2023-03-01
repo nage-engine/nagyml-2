@@ -2,7 +2,7 @@ use anyhow::{Result, anyhow, Context};
 use semver::Version;
 use serde::Deserialize;
 
-use crate::loading::parse;
+use crate::{loading::parse, game::main::UnlockedInfoPages};
 
 use super::{path::Path, choice::{Variables, Notes}, text::{TextSpeed, TextLines}};
 
@@ -71,7 +71,9 @@ pub struct Entrypoint {
 	pub path: Path,
 	pub background: Option<TextLines>,
 	pub notes: Option<Notes>,
-	pub variables: Option<Variables>
+	pub variables: Option<Variables>,
+	#[serde(rename = "info")]
+	pub info_pages: Option<UnlockedInfoPages>
 }
 
 #[derive(Deserialize, Debug)]

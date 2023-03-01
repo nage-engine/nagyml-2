@@ -121,7 +121,7 @@ impl Prompt {
 
 	/// Gathers all choices that a player can use based on the note context.
 	pub fn usable_choices(&self, notes: &Notes, text_context: &TextContext) -> Result<Vec<&Choice>> {
-		let mut result: Vec<&Choice> = Vec::new();
+		let mut result = Vec::new();
 		for choice in &self.choices {
 			if choice.can_player_use(notes, text_context)? {
 				result.push(choice);
