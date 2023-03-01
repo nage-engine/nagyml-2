@@ -22,7 +22,7 @@ pub struct Prompt {
 /// A prompt's overarching function based on its choices.
 pub enum PromptModel<'a> {
 	/// Has one choice. This choice has an `input` field.
-	Input(&'a String, Option<&'a TemplatableString>),
+	Input(String, Option<&'a TemplatableString>),
 	/// A normal prompt-choice container model.
 	Response,
 	/// Has one choice. This choice lacks response or input; immediately jumps to another prompt.
@@ -102,28 +102,32 @@ impl Prompt {
 	}
 
 	/// Returns the [`PromptModel`] based on this prompt's choices. See the enum's fields for criteria.
-	pub fn model(&self) -> PromptModel {
+	pub fn model(&self, text_context: &TextContext) -> Result<PromptModel> {
 		use PromptModel::*;
 		if self.choices.len() == 1 {
 			let choice = &self.choices[0];
 			if let Some(input) = &choice.input {
-				return Input(&input.name, input.text.as_ref());
+				return Ok(Input(input.name.fill(text_context)?, input.text.as_ref()));
 			}
 			else if choice.response.is_none() {
 				if let Some(ending) = &choice.ending {
-					return Ending(ending);
+					return Ok(Ending(ending));
 				}
-				return Redirect(choice);
+				return Ok(Redirect(choice));
 			}
 		}
-		Response
+		Ok(Response)
 	}
 
-	/// Gathers all choices that a player can use based on 
-	pub fn usable_choices(&self, notes: &Notes) -> Vec<&Choice> {
-		self.choices.iter()
-			.filter(|choice| choice.can_player_use(notes))
-			.collect()
+	/// Gathers all choices that a player can use based on the note context.
+	pub fn usable_choices(&self, notes: &Notes, text_context: &TextContext) -> Result<Vec<&Choice>> {
+		let mut result: Vec<&Choice> = Vec::new();
+		for choice in &self.choices {
+			if choice.can_player_use(notes, text_context)? {
+				result.push(choice);
+			}
+		}
+		Ok(result)
 	}
 
 	/// Prints the prompt text, if any, and the choices display, if any are responses.
@@ -168,10 +172,10 @@ impl Prompt {
 
 	/// Returns a block of debug information about this prompt, 
 	/// including the ID, type, choices configuration, and other prompts that jump to this one.
-	pub fn debug_info(&self, name: &String, file: &String, prompts: &Prompts, notes: &Notes) -> String {
-		let model = self.model();
+	pub fn debug_info(&self, name: &String, file: &String, prompts: &Prompts, notes: &Notes, text_context: &TextContext) -> Result<String> {
+		let model = self.model(text_context)?;
 		let choices_amt = self.choices.len();
-		let usable_choices = self.usable_choices(notes).len();
+		let usable_choices = self.usable_choices(notes, text_context)?.len();
 		let external_jumps: Vec<String> = Self::external_jumps(name, file, prompts).iter()
     		.map(|(other_id, choices)| {
 				let indices: Vec<String> = choices.iter().map(|i| format!("#{}", i + 1)).collect();
@@ -181,6 +185,6 @@ impl Prompt {
 		let id_and_model = format!("ID: {file}/{name}\n{model}");
 		let choices = format!("{choices_amt} choice(s)\n{usable_choices} of them accessible");
 		let jumps = format!("Prompts that jump here:\n{}", external_jumps.join("\n"));
-		format!("\n{id_and_model}\n\n{choices}\n\n{jumps}")
+		Ok(format!("\n{id_and_model}\n\n{choices}\n\n{jumps}"))
 	}
 }

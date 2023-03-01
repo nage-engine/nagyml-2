@@ -2,7 +2,7 @@ use anyhow::{Result, anyhow};
 use clap::Parser;
 use itertools::Itertools;
 
-use crate::{core::{player::Player, prompt::Prompt as PromptUtil, manifest::Manifest, text::Translations}, game::{gloop::GameLoopResult, main::Resources}};
+use crate::{core::{player::Player, prompt::Prompt as PromptUtil, manifest::Manifest, text::{Translations, TextContext}}, game::{gloop::GameLoopResult, main::Resources}};
 
 #[derive(Parser, Debug, PartialEq)]
 #[command(multicall = true)]
@@ -111,7 +111,7 @@ impl RuntimeCommand {
 	/// Executes a runtime command if the player has permission to do so.
 	///
 	/// Any errors will be reported to the input loop with a retry following.
-	pub fn run(&self, config: &Manifest, player: &mut Player, resources: &Resources) -> Result<CommandResult> {
+	pub fn run(&self, config: &Manifest, player: &mut Player, resources: &Resources, text_context: &TextContext) -> Result<CommandResult> {
 		if !Self::DEFAULT_COMMANDS.contains(&self) && !config.settings.debug {
 			return Err(anyhow!("Unable to access debug commands"));
 		}
@@ -132,7 +132,7 @@ impl RuntimeCommand {
 			},
 			Prompt { file, name } => {
 				let prompt = PromptUtil::get(&resources.prompts, name, file)?;
-				Output(prompt.debug_info(name, file, &resources.prompts, &player.notes))
+				Output(prompt.debug_info(name, file, &resources.prompts, &player.notes, text_context)?)
 			}
 			Notes => Self::notes(player)?,
 			Variables => Self::variables(player)?

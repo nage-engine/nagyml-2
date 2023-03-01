@@ -24,7 +24,7 @@ pub fn handle_quit(shutdown: bool) -> GameLoopResult {
 
 pub fn handle_choice(choice: &Choice, config: &Manifest, player: &mut Player, text_context: &TextContext) -> Result<GameLoopResult> {
 	use GameLoopResult::*;
-	player.choose(choice, None, config)?;
+	player.choose(choice, None, config, text_context)?;
 	if let Some(ending) = &choice.ending {
 		println!();
 		Text::print_lines(ending, text_context)?;
@@ -33,11 +33,11 @@ pub fn handle_choice(choice: &Choice, config: &Manifest, player: &mut Player, te
 	Ok(Continue)
 }
 
-pub fn handle_command(parse: Result<RuntimeCommand>, config: &Manifest, player: &mut Player, resources: &Resources) -> Result<GameLoopResult> {
+pub fn handle_command(parse: Result<RuntimeCommand>, config: &Manifest, player: &mut Player, resources: &Resources, text_context: &TextContext) -> Result<GameLoopResult> {
 	match &parse {
 		Err(err) => println!("\n{err}"), // Clap error
 		Ok(command) => {
-			match command.run(config, player, resources) {
+			match command.run(config, player, resources, text_context) {
 				Err(err) => println!("Error: {err}"), // Command runtime error
 				Ok(result) => {
 					match result {
@@ -63,11 +63,11 @@ pub fn take_input(input: &mut InputController, context: &InputContext, config: &
 			InputResult::Choice(i) => handle_choice(choices[i - 1], config, player, text_context)?,
 			InputResult::Variable(result) => {
 				// Modify variables after the choose call since history entries are sensitive to this order
-				player.choose(choices[0], Some(&result), config)?;
+				player.choose(choices[0], Some(&result), config, text_context)?;
 				player.variables.insert(result.0.clone(), result.1.clone());
 				Continue
 			},
-			InputResult::Command(parse) => handle_command(parse, config, player, resources)?
+			InputResult::Command(parse) => handle_command(parse, config, player, resources, text_context)?
 		}
 	};
 	Ok(result)
@@ -75,7 +75,7 @@ pub fn take_input(input: &mut InputController, context: &InputContext, config: &
 
 pub fn next_input_context(model: &PromptModel, choices: &Vec<&Choice>, text_context: &TextContext) -> Result<Option<InputContext>> {
 	use PromptModel::*;
-	let result = match model {
+	let result = match &model {
 		Response => Some(InputContext::Choices(choices.len())),
 		&Input(name, prompt) => Some(InputContext::Variable(name.clone(), prompt.map(|s| s.fill(text_context)).invert()?)),
 		_ => None

@@ -48,8 +48,8 @@ pub fn begin(config: &Manifest, player: &mut Player, resources: &Resources, inpu
 		let text_context = TextContext::new(config, player.notes.clone(), player.variables.clone(), &player.lang, resources);
 		let entry = player.latest_entry()?;
 		let next_prompt = Prompt::get_from_path(&resources.prompts, &entry.path)?;
-		let model = next_prompt.model();
-		let choices = next_prompt.usable_choices(&player.notes);
+		let model = next_prompt.model(&text_context)?;
+		let choices = next_prompt.usable_choices(&player.notes, &text_context)?;
 
 		if choices.is_empty() {
 			return Err(anyhow!("No usable choices"))
@@ -58,7 +58,7 @@ pub fn begin(config: &Manifest, player: &mut Player, resources: &Resources, inpu
 		next_prompt.print(&model, entry.display, &choices, &text_context)?;
 
 		match model {
-			PromptModel::Redirect(choice) => player.choose(choice, None, config)?,
+			PromptModel::Redirect(choice) => player.choose(choice, None, config, &text_context)?,
 			PromptModel::Ending(lines) => {
 				Text::print_lines(lines, &text_context)?;
 				break 'outer true

@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::{loading::parse, input::controller::VariableInputResult};
 
-use super::{path::Path, choice::{NoteApplication, Notes, Variables, NoteActions, Choice}, manifest::Manifest};
+use super::{path::Path, choice::{NoteApplication, Notes, Variables, NoteActions, Choice}, manifest::Manifest, text::TextContext};
 
 #[derive(Serialize, Deserialize, Debug)]
 /// A single variable value recording.
@@ -37,6 +37,24 @@ impl VariableEntry {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
+pub struct NoteEntry {
+	pub value: String,
+	pub take: bool
+}
+
+impl NoteEntry {
+	pub fn from_application(app: &NoteApplication, text_context: &TextContext) -> Result<Self> {
+		let entry = NoteEntry { 
+			value: app.name.fill(text_context)?, 
+			take: app.take
+		};
+		Ok(entry)
+	}
+}
+
+pub type NoteEntries = Vec<NoteEntry>;
+
+#[derive(Serialize, Deserialize, Debug)]
 /// A reversible recording of a prompt jump.
 pub struct HistoryEntry {
 	/// The prompt path the player jumped to.
@@ -46,7 +64,7 @@ pub struct HistoryEntry {
 	/// Whether this history entry can be reversed according to [`Choice::lock`].
 	pub locked: bool,
 	/// The note actions executed during this entry, if any.
-	pub notes: Option<Vec<NoteApplication>>,
+	pub notes: Option<NoteEntries>,
 	/// The variables applied during this entry, if any.
 	pub variables: Option<VariableEntries>
 }
@@ -114,28 +132,30 @@ impl Player {
 	/// 
 	/// If `take` is `true`, attempts to remove the note.
 	/// Otherwise, inserts the note if not already present.
-	pub fn apply_note(&mut self, app: &NoteApplication, reverse: bool) {
-		let take = if reverse { !app.take } else { app.take };
+	pub fn apply_note(&mut self, name: &str, take: bool, reverse: bool) -> Result<()> {
+		let take = if reverse { !take } else { take };
 		if take {
-			self.notes.remove(&app.name);
+			self.notes.remove(name);
 		}
 		else {
-			self.notes.insert(app.name.clone());
+			self.notes.insert(name.to_owned());
 		}
+		Ok(())
 	}
 
 	/// Accepts a [`NoteActions`] object.
 	/// 
 	/// Uses [`Self::apply_note`] for note applications and attempts to insert the `once` value.
-	pub fn accept_note_actions(&mut self, actions: &NoteActions) {
+	pub fn accept_note_actions(&mut self, actions: &NoteActions, text_context: &TextContext) -> Result<()> {
 		if let Some(apps) = &actions.apply {
 			for app in apps {
-				self.apply_note(app, false);
+				self.apply_note(&app.name.fill(text_context)?, app.take, false)?;
 			}
 		}
 		if let Some(once) = &actions.once {
-			self.notes.insert(once.clone());
+			self.notes.insert(once.fill(text_context)?);
 		}
+		Ok(())
 	}
 
 	/// Returns the latest history entry, if any.
@@ -156,9 +176,9 @@ impl Player {
 	/// 
 	/// There must always be at least one history entry to take modifications from.
 	/// Additionally, this call respect's the game's [`HistorySettings`] and prunes the front of the history list based on the size.
-	pub fn push_history(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest) -> Result<()> {
+	pub fn push_history(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, text_context: &TextContext) -> Result<()> {
 		let latest = self.latest_entry()?;
-		if let Some(entry) = choice.to_history_entry(&latest, input, &self.variables, config) {
+		if let Some(entry) = choice.to_history_entry(&latest, input, config, &self.variables, text_context) {
 			self.history.push_back(entry?);
 		}
 		if self.history.len() > config.settings.history.size {
@@ -171,7 +191,7 @@ impl Player {
 		let latest = Self::pop_latest_entry(self)?;
 		if let Some(apps) = &latest.notes {
 			for app in apps {
-				self.apply_note(&app, true);
+				self.apply_note(&app.value, app.take, true)?;
 			}
 		}
 		if let Some(vars) = latest.variables {
@@ -185,10 +205,10 @@ impl Player {
 		Ok(())
 	}
 
-	pub fn choose(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest) -> Result<()> {
-		self.push_history(choice, input, config)?;
+	pub fn choose(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, text_context: &TextContext) -> Result<()> {
+		self.push_history(choice, input, config, text_context)?;
 		if let Some(actions) = &choice.notes {
-			self.accept_note_actions(actions);
+			self.accept_note_actions(actions, text_context)?;
 		}
 		if let Some(variables) = &choice.variables {
 			self.variables.extend(variables.clone());

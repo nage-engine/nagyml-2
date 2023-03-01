@@ -2,35 +2,36 @@ use std::{collections::{HashMap, HashSet}};
 
 use crate::input::controller::VariableInputResult;
 
-use super::{text::{Text, TextLines, TemplatableString, TextContext}, path::Path, prompt::{Prompts, Prompt}, player::{HistoryEntry, VariableEntry, VariableEntries}, manifest::Manifest};
+use super::{text::{Text, TextLines, TemplatableString, TextContext}, path::Path, prompt::{Prompts, Prompt}, player::{HistoryEntry, VariableEntry, VariableEntries, NoteEntry, NoteEntries}, manifest::Manifest};
 
 use anyhow::{Result, anyhow, Context};
-use serde::{Serialize, Deserialize};
+use result::OptionResultExt;
+use serde::Deserialize;
 
 pub fn default_true() -> bool { true }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct NoteApplication {
-	pub name: String,
+	pub name: TemplatableString,
 	#[serde(default)]
 	pub take: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct NoteRequirement {
-	name: String,
+	name: TemplatableString,
 	#[serde(default = "default_true")]
 	has: bool
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct NoteActions {
 	pub apply: Option<Vec<NoteApplication>>,
 	require: Option<Vec<NoteRequirement>>,
-	pub once: Option<String>
+	pub once: Option<TemplatableString>
 }
 
 /// A list of string symbols tracked on a player.
@@ -41,7 +42,7 @@ pub type Notes = HashSet<String>;
 pub struct VariableInput {
 	pub text: Option<TemplatableString>,
 	#[serde(rename = "variable")]
-	pub name: String
+	pub name: TemplatableString
 }
 
 /// A map of display variables wherein the key is the variable name and the value is the variable's display.
@@ -61,6 +62,7 @@ pub struct Choice {
 	pub notes: Option<NoteActions>,
 	pub variables: Option<Variables>,
 	pub log: Option<TemplatableString>,
+	pub info: Option<Vec<TemplatableString>>,
 	pub ending: Option<TextLines>
 }
 
@@ -91,6 +93,18 @@ impl Choice {
 		Ok(())
 	}
 
+	pub fn create_note_entries(&self, text_context: &TextContext) -> Result<Option<NoteEntries>> {
+		self.notes.as_ref().map(|actions| {
+			actions.apply.as_ref().map(|apps| {
+				apps.iter()
+        			.map(|app| NoteEntry::from_application(app, text_context))
+        			.collect()
+			})
+		})
+		.flatten()
+		.invert()
+	}
+
 	/// Creates a map of variable entries to use when creating a new [`HistoryEntry`].
 	/// 
 	/// If both the input result and this choice's `variables` key are [`None`], returns none.
@@ -111,13 +125,13 @@ impl Choice {
 	/// Constructs a [`HistoryEntry`] based on this choice object. 
 	/// 
 	/// Copies over control flags, the path based on the latest history entry, and notes and variable applications.
-	pub fn to_history_entry(&self, latest: &HistoryEntry, input: Option<&VariableInputResult>, variables: &Variables, config: &Manifest) -> Option<Result<HistoryEntry>> {
+	pub fn to_history_entry(&self, latest: &HistoryEntry, input: Option<&VariableInputResult>, config: &Manifest, variables: &Variables, text_context: &TextContext) -> Option<Result<HistoryEntry>> {
 		self.jump.as_ref().map(|jump| {
 			Ok(HistoryEntry {
 				path: jump.fill(&latest.path)?,
 				display: self.display,
 				locked: self.lock.unwrap_or(config.settings.history.locked),
-				notes: self.notes.clone().map(|actions| actions.apply).flatten(),
+				notes: self.create_note_entries(text_context)?,
 				variables: self.create_variable_entries(input, variables)
 			})
 		})
@@ -128,22 +142,22 @@ impl Choice {
 	/// This check passes if:
 	/// - All note requirement `has` fields match the state of the provided [`Notes`] object, and
 	/// - The notes object does not contain the `once` value, if any is present
-	pub fn can_player_use(&self, notes: &Notes) -> bool {
+	pub fn can_player_use(&self, notes: &Notes, text_context: &TextContext) -> Result<bool> {
 		if let Some(actions) = &self.notes {
 			if let Some(require) = &actions.require {
 				for requirement in require {
-					if requirement.has != notes.contains(&requirement.name) {
-						return false;
+					if requirement.has != notes.contains(&requirement.name.fill(text_context)?) {
+						return Ok(false);
 					}
 				}
 			}
 			if let Some(once) = &actions.once {
-				if notes.contains(once) {
-					return false;
+				if notes.contains(&once.fill(text_context)?) {
+					return Ok(false);
 				}
 			}
 		}
-		true
+		Ok(true)
 	}
 
 	/// Fills in and formats tag content, if any.
