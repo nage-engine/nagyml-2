@@ -150,10 +150,12 @@ impl Choice {
 	/// 
 	/// If [`Some`], returns `[VALUE] `, trailing space included.
 	/// If [`None`], returns an empty [`String`].
-	fn tag(&self, text_context: &TextContext) -> String {
-		self.tag.as_ref()
-			.map(|s| format!("[{}] ", s.fill(text_context)))
-			.unwrap_or(String::new())
+	fn tag(&self, text_context: &TextContext) -> Result<String> {
+		let result = match &self.tag {
+			Some(tag) => format!("[{}] ", tag.fill(text_context)?),
+			None => String::new()
+		};
+		Ok(result)
 	}
 
 	/// Constructs the response line for display in the game's runtime.
@@ -162,19 +164,20 @@ impl Choice {
 	/// 
 	/// - `1) [ROGUE] "Ain't no thief."`
 	/// - `2) Put down the sword`
-	fn response_line(&self, index: usize, text_context: &TextContext) -> String {
-		let tag = self.tag(text_context);
-		let response = self.response.as_ref().unwrap().get(text_context);
-		format!("{index}) {tag}{response}")
+	fn response_line(&self, index: usize, text_context: &TextContext) -> Result<String> {
+		let tag = self.tag(text_context)?;
+		let response = self.response.as_ref().unwrap().get(text_context)?;
+		Ok(format!("{index}) {tag}{response}"))
 	}
 
 	/// Constructs a [`String`] of ordered choice responses.
-	pub fn display(choices: &Vec<&Choice>, text_context: &TextContext) -> String {
-		choices.iter().enumerate()
+	pub fn display(choices: &Vec<&Choice>, text_context: &TextContext) -> Result<String> {
+		let result = choices.iter().enumerate()
 			.filter(|(_, choice)| choice.response.is_some())
 			.map(|(index, choice)| choice.response_line(index + 1, text_context))
-			.collect::<Vec<String>>()
-			.join("\n")
+			.try_collect::<Vec<String>>()?
+			.join("\n");
+		Ok(result)
 	}
 
 	/// Whether this choice jumps to a specific prompt.

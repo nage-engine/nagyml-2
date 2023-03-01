@@ -18,3 +18,5 @@ rustyline = "10.1.1"
 clap = { version = "4.1.6", features = [ "derive" ] }
 itertools = "0.10.5"
 rlua = "0.19.4"
+result = "1.0.0"
+rand = "0.8.5"

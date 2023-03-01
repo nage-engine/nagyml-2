@@ -1,8 +1,9 @@
 #![feature(result_flattening)]
+#![feature(iterator_try_collect)]
 
 use crate::core::{manifest::Manifest, player::Player};
 
-use anyhow::Result;
+use anyhow::{Result, Context};
 use game::main::{Resources, begin, crash_context, shutdown};
 use input::controller::InputController;
 
@@ -22,7 +23,7 @@ fn main() -> Result<()> {
     let mut input = InputController::new()?;
     // Begin game loop
     let silent = begin(&config, &mut player, &resources, &mut input)
-        .map_err(|err| err.context(crash_context(&config)))?;
+        .with_context(|| crash_context(&config))?;
     // Shut down game with silence based on game loop result
     shutdown(&config, &player, silent);
 

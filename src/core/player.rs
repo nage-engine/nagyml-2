@@ -149,7 +149,7 @@ impl Player {
 		if latest.locked {
 			return Err(anyhow!("Can't go back right now!"))
 		}
-		Ok(player.history.pop_front().unwrap())
+		Ok(player.history.pop_back().unwrap())
 	}
 
 	/// Appends a new entry to the history data based on what happened during the last input loop.

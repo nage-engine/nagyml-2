@@ -127,15 +127,16 @@ impl Prompt {
 	}
 
 	/// Prints the prompt text, if any, and the choices display, if any are responses.
-	pub fn print(&self, model: &PromptModel, display: bool, usable_choices: &Vec<&Choice>, text_context: &TextContext) {
+	pub fn print(&self, model: &PromptModel, display: bool, usable_choices: &Vec<&Choice>, text_context: &TextContext) -> Result<()> {
 		if display {
 			if let Some(lines) = &self.text {
-				Text::print_lines_nl(lines, text_context);
+				Text::print_lines_nl(lines, text_context)?;
 			}
 		}
-		if let PromptModel::Response = model {
-			println!("{}\n", Choice::display(usable_choices, text_context));
-		}
+		let result = if let PromptModel::Response = model {
+			println!("{}\n", Choice::display(usable_choices, text_context)?);
+		};
+		Ok(result)
 	}
 
 	/// Returns the indices of any of this prompt's choices that jump to another prompt.

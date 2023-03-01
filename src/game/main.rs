@@ -1,12 +1,8 @@
-use std::collections::HashMap;
-
 use anyhow::{Result, anyhow};
 
-use crate::{input::controller::InputController, loading::{load_content, load_files}, core::{prompt::{Prompts, Prompt, PromptModel}, text::{Translations, Text, TextContext, TranslationFile}, manifest::Manifest, player::Player}};
+use crate::{input::controller::InputController, loading::load_content, core::{prompt::{Prompts, Prompt, PromptModel}, text::{Translations, Text, TextContext, TranslationFile}, manifest::Manifest, player::Player, scripts::Scripts}};
 
 use super::gloop::{next_input_context, take_input, GameLoopResult};
-
-pub type Scripts = HashMap<String, String>;
 
 #[derive(Debug)]
 pub struct Resources {
@@ -20,7 +16,7 @@ impl Resources {
 		let result = Resources {
 			prompts: load_content("prompts")?,
 			translations: load_content("lang")?,
-			scripts: load_files("scripts")?
+			scripts: Scripts::load()?
 		};
 		Ok(result)
 	}
@@ -35,20 +31,21 @@ impl Resources {
 	}
 }
 
-pub fn first_play_init(config: &Manifest, player: &mut Player, resources: &Resources) {
+pub fn first_play_init(config: &Manifest, player: &mut Player, resources: &Resources) -> Result<()> {
 	if let Some(background) = &config.entry.background {
-		Text::print_lines_nl(background, &TextContext::new(config, player.variables.clone(), &player.lang, resources));
+		Text::print_lines_nl(background, &TextContext::new(config, player.notes.clone(), player.variables.clone(), &player.lang, resources))?;
 	}
 	player.began = true;
+	Ok(())
 }
 
 pub fn begin(config: &Manifest, player: &mut Player, resources: &Resources, input: &mut InputController) -> Result<bool> {
 	if !player.began {
-		first_play_init(config, player, resources);
+		first_play_init(config, player, resources)?;
 	}
 	let silent = 'outer: loop {
 		// Text context owns variables to avoid immutable and mutable borrow overlap
-		let text_context = TextContext::new(config, player.variables.clone(), &player.lang, resources);
+		let text_context = TextContext::new(config, player.notes.clone(), player.variables.clone(), &player.lang, resources);
 		let entry = player.latest_entry()?;
 		let next_prompt = Prompt::get_from_path(&resources.prompts, &entry.path)?;
 		let model = next_prompt.model();
@@ -58,16 +55,16 @@ pub fn begin(config: &Manifest, player: &mut Player, resources: &Resources, inpu
 			return Err(anyhow!("No usable choices"))
 		}
 		
-		next_prompt.print(&model, entry.display, &choices, &text_context);
+		next_prompt.print(&model, entry.display, &choices, &text_context)?;
 
 		match model {
 			PromptModel::Redirect(choice) => player.choose(choice, None, config)?,
 			PromptModel::Ending(lines) => {
-				Text::print_lines(lines, &text_context);
+				Text::print_lines(lines, &text_context)?;
 				break 'outer true
 			},
 			_ => loop {
-				let context = next_input_context(&model, &choices, &text_context)
+				let context = next_input_context(&model, &choices, &text_context)?
 					.ok_or(anyhow!("Could not resolve input context"))?;
 				// Borrow-checker coercion; only using necessary fields in static method
 				match take_input(input, &context, config, player, resources, &text_context, &choices)? {

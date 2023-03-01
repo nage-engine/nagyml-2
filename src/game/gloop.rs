@@ -1,4 +1,5 @@
 use anyhow::Result;
+use result::OptionResultExt;
 
 use crate::{core::{player::Player, manifest::Manifest, text::{Text, TextContext}, choice::Choice, prompt::PromptModel}, input::{controller::{InputContext, InputController, InputResult}, commands::{RuntimeCommand, CommandResult}}};
 
@@ -26,7 +27,7 @@ pub fn handle_choice(choice: &Choice, config: &Manifest, player: &mut Player, te
 	player.choose(choice, None, config)?;
 	if let Some(ending) = &choice.ending {
 		println!();
-		Text::print_lines(ending, text_context);
+		Text::print_lines(ending, text_context)?;
 		return Ok(Shutdown(true));
 	}
 	Ok(Continue)
@@ -72,11 +73,12 @@ pub fn take_input(input: &mut InputController, context: &InputContext, config: &
 	Ok(result)
 }
 
-pub fn next_input_context(model: &PromptModel, choices: &Vec<&Choice>, text_context: &TextContext) -> Option<InputContext> {
+pub fn next_input_context(model: &PromptModel, choices: &Vec<&Choice>, text_context: &TextContext) -> Result<Option<InputContext>> {
 	use PromptModel::*;
-	match model {
+	let result = match model {
 		Response => Some(InputContext::Choices(choices.len())),
-		&Input(name, prompt) => Some(InputContext::Variable(name.clone(), prompt.map(|s| s.fill(text_context)))),
+		&Input(name, prompt) => Some(InputContext::Variable(name.clone(), prompt.map(|s| s.fill(text_context)).invert()?)),
 		_ => None
-	}
+	};
+	Ok(result)
 }

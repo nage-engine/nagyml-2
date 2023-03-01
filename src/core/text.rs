@@ -1,23 +1,26 @@
 use std::fmt::Display;
 
+use anyhow::Result;
 use serde::{Serialize, Deserialize};
 use snailshell::snailprint_s;
 
-use crate::{loading::{Contents, ContentFile}, game::main::{Scripts, Resources}};
+use crate::{loading::{Contents, ContentFile}, game::main::Resources};
 
-use super::{choice::Variables, manifest::{Manifest, Metadata}};
+use super::{choice::{Variables, Notes}, manifest::{Manifest, Metadata}, scripts::Scripts};
 
 pub struct TextContext<'a> {
 	config: &'a Manifest,
+	notes: Notes,
 	variables: Variables,
 	lang_file: Option<&'a TranslationFile>,
 	scripts: &'a Scripts
 }
 
 impl<'a> TextContext<'a> {
-	pub fn new(config: &'a Manifest, variables: Variables, lang: &str, resources: &'a Resources) -> Self {
+	pub fn new(config: &'a Manifest, notes: Notes, variables: Variables, lang: &str, resources: &'a Resources) -> Self {
 		TextContext { 
 			config, 
+			notes,
 			variables, 
 			lang_file: resources.lang_file(lang), 
 			scripts: &resources.scripts 
@@ -40,16 +43,16 @@ impl<'de> Deserialize<'de> for TemplatableString {
 
 impl TemplatableString {
 	/// The default value for an undefined interpolation component.
-	pub const DEFAULT_VARIABLE: &'static str = "UNDEFINED";
+	pub const DEFAULT_VALUE: &'static str = "UNDEFINED";
 
 	/// Fills a templatable string based on the input delimiter characters and a filler function.
 	/// 
 	/// If the filler function returns [`None`], yields [`TemplatableString::DEFAULT_VARIABLE`].
 	/// 
-	/// If no templating characters or variables exist, returns the input string.
-	fn template<'a, F>(content: &str, before: char, after: char, filler: F) -> String where F: Fn(&str) -> Option<String> {
+	/// If no templating characters exist, returns the input string.
+	fn template<'a, F>(content: &str, before: char, after: char, filler: F) -> Result<String> where F: Fn(&str) -> Result<Option<String>> {
 		if !content.contains(before) {
-			return content.to_owned();
+			return Ok(content.to_owned());
 		}
 		let mut result = String::with_capacity(content.len());
 		let mut last_opener: Option<usize> = None;
@@ -60,7 +63,7 @@ impl TemplatableString {
 			else if c == after {
 				if let Some(lb) = last_opener {
 					let var = &content[(lb + 1)..index];
-					result.push_str(&filler(var).unwrap_or(Self::DEFAULT_VARIABLE.to_owned()));
+					result.push_str(&filler(var)?.unwrap_or(Self::DEFAULT_VALUE.to_owned()));
 					last_opener = None;
 				}
 			}
@@ -70,7 +73,7 @@ impl TemplatableString {
 				}
 			}
 		}
-		result
+		Ok(result)
 	}
 
 	/// Attempts to retrieve a content string from the passed-in lang file.
@@ -88,10 +91,15 @@ impl TemplatableString {
 		metadata.global_variable(var).or(variables.get(var).cloned())
 	}
 
-	pub fn fill(&self, context: &TextContext) -> String {
+	pub fn fill(&self, context: &TextContext) -> Result<String> {
 		let content = self.lang_file_content(context.lang_file);
-		Self::template(content, '<', '>', move |var| {
-			Self::fill_variable(var, &context.variables, &context.config.metadata).map(|s| s.clone())
+		let scripted = Self::template(content, '(', ')', move |var| {
+			context.scripts.get(var, &context.notes, &context.variables)
+		})?;
+		Self::template(&scripted, '<', '>', move |var| {
+			let filled = Self::fill_variable(var, &context.variables, &context.config.metadata)
+				.map(|s| s.clone());
+			Ok(filled)
 		})
 	}
 }
@@ -159,12 +167,6 @@ impl TextSpeed {
 	pub fn print<T>(&self, content: &T) where T: Display {
 		snailprint_s(content, self.rate());
 	}
-
-	// Calls [`TextSpeed::print`] and prints a newline at the end.
-	/*pub fn print_nl<T>(&self, content: &T) where T: Display {
-		self.print(content);
-		println!();
-	}*/
 }
 
 #[derive(Deserialize, Debug)]
@@ -190,16 +192,17 @@ pub type Translations = Contents<String>;
 
 impl Text {
 	/// Retrieves text content with [`TemplatableString::fill`] and formats it based on the [`TextMode`].
-	pub fn get(&self, context: &TextContext) -> String {
-		self.mode.format(&self.content.fill(context))
+	pub fn get(&self, context: &TextContext) -> Result<String> {
+		Ok(self.mode.format(&self.content.fill(context)?))
 	}
 
 	/// Formats and snailprints text based on its [`TextSpeed`]. 
 	/// 
 	/// If the text object does not contain a `speed` field, defaults to the provided config settings.
-	pub fn print(&self, context: &TextContext) {
+	pub fn print(&self, context: &TextContext) -> Result<()> {
 		let speed = self.speed.as_ref().unwrap_or(&context.config.settings.speed);
-		speed.print(&self.get(context));
+		speed.print(&self.get(context)?);
+		Ok(())
 	}
 
 	/// Calculates some [`SeparatedTextLines`] based on some text lines.
@@ -210,18 +213,20 @@ impl Text {
 	}
 
 	/// Formats and separates text lines and prints them sequentially.
-	pub fn print_lines(lines: &TextLines, context: &TextContext) {
+	pub fn print_lines(lines: &TextLines, context: &TextContext) -> Result<()> {
 		for (newline, line) in Self::get_separated_lines(lines) {
 			if newline {
 				println!();
 			}
-			line.print(context);
+			line.print(context)?;
 		}
+		Ok(())
 	}
 
 	/// Calls [`Text::print_lines`] and prints a newline at the end.
-	pub fn print_lines_nl(lines: &TextLines, context: &TextContext) {
-		Self::print_lines(lines, context);
+	pub fn print_lines_nl(lines: &TextLines, context: &TextContext) -> Result<()> {
+		Self::print_lines(lines, context)?;
 		println!();
+		Ok(())
 	}
 }

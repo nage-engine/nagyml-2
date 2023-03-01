@@ -19,9 +19,9 @@ pub struct Metadata {
 impl Metadata {
 	pub fn global_variable(&self, var: &str) -> Option<String> {
 		match var {
-			"nage.game_name" => Some(self.name.clone()),
-			"nage.game_authors" => Some(self.authors.join(", ")),
-			"nage.game_version" => Some(self.version.to_string()),
+			"nage:game_name" => Some(self.name.clone()),
+			"nage:game_authors" => Some(self.authors.join(", ")),
+			"nage:game_version" => Some(self.version.to_string()),
 			_ => None
 		}
 	}
