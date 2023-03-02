@@ -3,7 +3,7 @@ use std::{collections::{HashMap, HashSet, VecDeque}, vec};
 use anyhow::{Result, Context, anyhow};
 use serde::{Serialize, Deserialize};
 
-use crate::{loading::parse, input::controller::VariableInputResult, game::main::UnlockedInfoPages};
+use crate::{loading::parse, input::controller::VariableInputResult, game::main::{UnlockedInfoPages, Resources}};
 
 use super::{path::Path, choice::{NoteApplication, Notes, Variables, NoteActions, Choice}, manifest::Manifest, text::TextContext};
 
@@ -66,7 +66,9 @@ pub struct HistoryEntry {
 	/// The note actions executed during this entry, if any.
 	pub notes: Option<NoteEntries>,
 	/// The variables applied during this entry, if any.
-	pub variables: Option<VariableEntries>
+	pub variables: Option<VariableEntries>,
+	/// Whether a log entry was gained during this entry.
+	pub log: bool
 }
 
 impl HistoryEntry {
@@ -77,7 +79,8 @@ impl HistoryEntry {
 			display: true,
 			locked: false,
 			notes: None,
-			variables: None
+			variables: None,
+			log: false
 		}
 	}
 }
@@ -93,7 +96,10 @@ pub struct Player {
 	pub notes: Notes,
 	/// The player's current variables.
 	pub variables: Variables,
+	/// The player's current unlocked info pages.
 	pub info_pages: UnlockedInfoPages,
+	/// The player's current log entries.
+	pub log: Vec<String>,
 	/// Recordings of each prompt jump and their associated value changes.
 	pub history: VecDeque<HistoryEntry>
 }
@@ -110,6 +116,7 @@ impl Player {
 			notes: config.entry.notes.clone().unwrap_or(HashSet::new()),
 			variables: config.entry.variables.clone().unwrap_or(HashMap::new()),
 			info_pages: config.entry.info_pages.clone().unwrap_or(HashSet::new()),
+			log: config.entry.log.clone().unwrap_or(Vec::new()),
 			history: VecDeque::from(vec![entry])
 		}
 	}
@@ -189,6 +196,7 @@ impl Player {
 		Ok(())
 	}
 
+	/// Pops the latest [`HistoryEntry`] off the stack using [`Player::pop_latest_entry`] and reverses its effects.
 	pub fn reverse_history(&mut self) -> Result<()> {
 		let latest = Self::pop_latest_entry(self)?;
 		if let Some(apps) = &latest.notes {
@@ -204,9 +212,22 @@ impl Player {
 				};
 			}
 		}
+		if latest.log {
+			self.log.pop();
+		}
 		Ok(())
 	}
 
+	/// Pushes a new history entry using [`Player::push_history`] and applies choice data.
+	/// 
+	/// The following data is applied:
+	/// - `notes` actions
+	/// - `variables` map
+	/// - `info` unlocks
+	/// 
+	/// The applied data is sensitive and relies on the previous unaltered state.
+	/// For this reason, `log` data, which relies on the altered state, is **not** applied in this function.
+	/// To combine this choosing functionality with `log` entry pushes, use [`Player:choose_full`].
 	pub fn choose(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, text_context: &TextContext) -> Result<()> {
 		self.push_history(choice, input, config, text_context)?;
 		if let Some(actions) = &choice.notes {
@@ -221,5 +242,19 @@ impl Player {
 			}
 		}
 		Ok(())
+	}
+
+	pub fn try_push_log(&mut self, choice: &Choice, config: &Manifest, resources: &Resources) -> Result<()> {
+		if let Some(log) = &choice.log {
+			// Create a new text context using the new variable and note values for the logs
+			let new_text_context = TextContext::new(config, self.notes.clone(), self.variables.clone(), &self.lang, resources);
+			self.log.push(log.fill(&new_text_context)?);
+		}
+		Ok(())
+	}
+
+	pub fn choose_full(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, resources: &Resources, text_context: &TextContext) -> Result<()> {
+		self.choose(choice, input, config, text_context)?;
+		self.try_push_log(choice, config, resources)
 	}
 }

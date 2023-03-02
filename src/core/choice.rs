@@ -132,7 +132,8 @@ impl Choice {
 				display: self.display,
 				locked: self.lock.unwrap_or(config.settings.history.locked),
 				notes: self.create_note_entries(text_context)?,
-				variables: self.create_variable_entries(input, variables)
+				variables: self.create_variable_entries(input, variables),
+				log: self.log.is_some()
 			})
 		})
 	}

@@ -19,6 +19,11 @@ pub enum RuntimeCommand {
 		#[arg(help = "The info page to display. If none, lists all unlocked info pages")]
 		info: Option<String>
 	},
+	#[command(about = "Displays an action log page")]
+	Log {
+		#[arg(help = "The log page to display. If none, displays the first page", default_value = "0")]
+		page: usize
+	},
 	#[command(about = "Saves the player data")]
 	Save,
 	#[command(about = "Saves and quits the game")]
@@ -58,6 +63,8 @@ impl RuntimeCommand {
 		match self {
 			Back | Save | Quit => true,
 			Lang { lang: _ } => true,
+			Info { info: _ } => true,
+			Log { page: _ } => true,
 			_ => false
 		}
 	}
@@ -114,6 +121,22 @@ impl RuntimeCommand {
 		Ok(CommandResult::Submit(GameLoopResult::Retry(true)))
 	}
 
+	/// Handles a [`Log`](RuntimeCommand::Log) command.
+	fn log(log: &Vec<String>, page: usize) -> Result<CommandResult> {
+		if log.is_empty() {
+			return Err(anyhow!("No log entries to display"))
+		}
+		let pages: Vec<&[String]> = log.chunks(5).collect();
+		let pages_len = pages.len();
+		match pages.get(page) {
+			Some(&content) => {
+				let entries = content.join("\n\n");
+				Ok(CommandResult::Output(format!("\n{entries}\n\nPage {}/{pages_len}", page + 1)))
+			},
+			None => Err(anyhow!("Page does not exist (max: {pages_len})"))
+		}
+	}
+
 	/// Handles a [`Notes`](RuntimeCommand::Notes) command.
 	fn notes(player: &Player) -> Result<CommandResult> {
 		if player.notes.is_empty() {
@@ -148,6 +171,7 @@ impl RuntimeCommand {
 			Back => Self::back(player)?,
 			Lang { lang } => Self::lang(lang, player, &resources.translations)?,
 			Info { info } => Self::info(info, &player.info_pages, &resources.info_pages)?,
+			Log { page } => Self::log(&player.log, *page)?,
 			Save => {
 				player.save();
 				Output("Saving... ".to_owned())

@@ -73,7 +73,8 @@ pub struct Entrypoint {
 	pub notes: Option<Notes>,
 	pub variables: Option<Variables>,
 	#[serde(rename = "info")]
-	pub info_pages: Option<UnlockedInfoPages>
+	pub info_pages: Option<UnlockedInfoPages>,
+	pub log: Option<Vec<String>>
 }
 
 #[derive(Deserialize, Debug)]

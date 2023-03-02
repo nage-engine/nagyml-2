@@ -65,7 +65,7 @@ pub fn begin(config: &Manifest, player: &mut Player, resources: &Resources, inpu
 		next_prompt.print(&model, entry.display, &choices, &text_context)?;
 
 		match model {
-			PromptModel::Redirect(choice) => player.choose(choice, None, config, &text_context)?,
+			PromptModel::Redirect(choice) => player.choose_full(choice, None, config, resources, &text_context)?,
 			PromptModel::Ending(lines) => {
 				Text::print_lines(lines, &text_context)?;
 				break 'outer true

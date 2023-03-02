@@ -22,9 +22,9 @@ pub fn handle_quit(shutdown: bool) -> GameLoopResult {
 	}
 }
 
-pub fn handle_choice(choice: &Choice, config: &Manifest, player: &mut Player, text_context: &TextContext) -> Result<GameLoopResult> {
+pub fn handle_choice(choice: &Choice, config: &Manifest, player: &mut Player, resources: &Resources, text_context: &TextContext) -> Result<GameLoopResult> {
 	use GameLoopResult::*;
-	player.choose(choice, None, config, text_context)?;
+	player.choose_full(choice, None, config, resources, text_context)?;
 	if let Some(ending) = &choice.ending {
 		println!();
 		Text::print_lines(ending, text_context)?;
@@ -60,11 +60,12 @@ pub fn take_input(input: &mut InputController, context: &InputContext, config: &
 		},
 		Ok(result) => match result {
 			InputResult::Quit(shutdown) => handle_quit(shutdown),
-			InputResult::Choice(i) => handle_choice(choices[i - 1], config, player, text_context)?,
+			InputResult::Choice(i) => handle_choice(choices[i - 1], config, player, resources, text_context)?,
 			InputResult::Variable(result) => {
 				// Modify variables after the choose call since history entries are sensitive to this order
 				player.choose(choices[0], Some(&result), config, text_context)?;
 				player.variables.insert(result.0.clone(), result.1.clone());
+				player.try_push_log(choices[0], config, resources)?;
 				Continue
 			},
 			InputResult::Command(parse) => handle_command(parse, config, player, resources, text_context)?
