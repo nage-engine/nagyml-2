@@ -31,7 +31,7 @@ impl<'a> TextContext<'a> {
 #[derive(Debug)]
 /// A string that is able to undergo template transformations based on variables or custom scripts.
 pub struct TemplatableString {
-	content: String
+	pub content: String
 }
 
 impl<'de> Deserialize<'de> for TemplatableString {
@@ -45,13 +45,21 @@ impl TemplatableString {
 	/// The default value for an undefined interpolation component.
 	pub const DEFAULT_VALUE: &'static str = "UNDEFINED";
 
+	fn is_templatable_char(content: &str, symbol: char) -> bool {
+		return content.contains(symbol);
+	}
+
+	pub fn is_templatable(content: &str) -> bool {
+		Self::is_templatable_char(content, '(') && Self::is_templatable_char(content, '<')
+	}
+
 	/// Fills a templatable string based on the input delimiter characters and a filler function.
 	/// 
 	/// If the filler function returns [`None`], yields [`TemplatableString::DEFAULT_VARIABLE`].
 	/// 
 	/// If no templating characters exist, returns the input string.
 	fn template<'a, F>(content: &str, before: char, after: char, filler: F) -> Result<String> where F: Fn(&str) -> Result<Option<String>> {
-		if !content.contains(before) {
+		if !Self::is_templatable_char(content, before) {
 			return Ok(content.to_owned());
 		}
 		let mut result = String::with_capacity(content.len());

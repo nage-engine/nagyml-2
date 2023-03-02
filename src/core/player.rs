@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::{loading::parse, input::controller::VariableInputResult, game::main::{UnlockedInfoPages, Resources}};
 
-use super::{path::Path, choice::{NoteApplication, Notes, Variables, NoteActions, Choice}, manifest::Manifest, text::TextContext};
+use super::{choice::{NoteApplication, Notes, Variables, NoteActions, Choice, VariableApplications}, manifest::Manifest, text::{TextContext, TemplatableString}};
 
 #[derive(Serialize, Deserialize, Debug)]
 /// A single variable value recording.
@@ -20,17 +20,22 @@ pub struct VariableEntry {
 pub type VariableEntries = HashMap<String, VariableEntry>;
 
 impl VariableEntry {
-	pub fn new(name: &String, value: &String, variables: &Variables) -> Self {
+	pub fn new(name: &String, value: String, variables: &Variables) -> Self {
 		VariableEntry { 
 			value: value.clone(), 
 			previous: variables.get(name).map(|prev| prev.clone())
 		}
 	}
 
-	pub fn from_map(applying: &Variables, globals: &Variables) -> VariableEntries {
+	fn from_template(name: &String, value: &TemplatableString, variables: &Variables, text_context: &TextContext) -> Result<Self> {
+		Ok(VariableEntry::new(name, value.fill(text_context)?, variables))
+	}
+
+	pub fn from_map(applying: &VariableApplications, globals: &Variables, text_context: &TextContext) -> Result<VariableEntries> {
 		applying.iter()
 			.map(|(name, value)| {
-				(name.clone(), VariableEntry::new(name, value, globals))
+				let entry = VariableEntry::from_template(name, value, globals, text_context);
+				entry.map(|e| (name.clone(), e))
 			})
 			.collect()
 	}
@@ -52,13 +57,19 @@ impl NoteEntry {
 	}
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct PathEntry {
+	pub file: String,
+	pub prompt: String
+}
+
 pub type NoteEntries = Vec<NoteEntry>;
 
 #[derive(Serialize, Deserialize, Debug)]
 /// A reversible recording of a prompt jump.
 pub struct HistoryEntry {
 	/// The prompt path the player jumped to.
-	pub path: Path,
+	pub path: PathEntry,
 	/// Whether the new prompt's introduction text was displayed according to [`Choice::display`].
 	pub display: bool,
 	/// Whether this history entry can be reversed according to [`Choice::lock`].
@@ -73,7 +84,7 @@ pub struct HistoryEntry {
 
 impl HistoryEntry {
 	/// Constructs a player's first history entry based on an entrypoint path.
-	pub fn new(path: &Path) -> Self {
+	pub fn new(path: &PathEntry) -> Self {
 		Self {
 			path: path.clone(),
 			display: true,
@@ -234,7 +245,10 @@ impl Player {
 			self.accept_note_actions(actions, text_context)?;
 		}
 		if let Some(variables) = &choice.variables {
-			self.variables.extend(variables.clone());
+			let filled = variables.iter()
+    			.map(|(name, value)| value.fill(text_context).map(|v| (name.clone(), v)))
+				.collect::<Result<Variables>>()?;
+			self.variables.extend(filled);
 		}
 		if let Some(pages) = &choice.info {
 			for page in pages {

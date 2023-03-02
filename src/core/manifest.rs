@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 use crate::{loading::parse, game::main::UnlockedInfoPages};
 
-use super::{path::Path, choice::{Variables, Notes}, text::{TextSpeed, TextLines}};
+use super::{choice::{Variables, Notes}, text::{TextSpeed, TextLines}, player::PathEntry};
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -68,7 +68,7 @@ impl Default for Settings {
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Entrypoint {
-	pub path: Path,
+	pub path: PathEntry,
 	pub background: Option<TextLines>,
 	pub notes: Option<Notes>,
 	pub variables: Option<Variables>,

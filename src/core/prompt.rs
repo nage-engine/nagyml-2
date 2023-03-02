@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 use crate::loading::{ContentFile, Contents};
 
-use super::{text::{TextLines, Text, TemplatableString, TextContext}, choice::{Choices, Choice, Notes}, path::Path};
+use super::{text::{TextLines, Text, TemplatableString, TextContext}, choice::{Choices, Choice, Notes}, player::PathEntry};
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -63,7 +63,7 @@ impl Prompt {
 	}
 
 	/// Finds a specific prompt within a [`Prompts`] object.
-	pub fn get<'a>(prompts: &'a Prompts, name: &String, file: &String) -> Result<&'a Prompt> {
+	pub fn get<'a>(prompts: &'a Prompts, name: &str, file: &str) -> Result<&'a Prompt> {
 		Self::get_file(prompts, file)
 			.map(|prompt_file| {
 				prompt_file.get(name).ok_or(anyhow!("Invalid prompt '{name}'; not found in file '{file}'"))
@@ -74,9 +74,8 @@ impl Prompt {
 	/// Uses [`Prompt::get`] to find a specific prompt.
 	/// 
 	/// The input path **must** have a `file` key.
-	pub fn get_from_path<'a>(prompts: &'a Prompts, path: &Path) -> Result<&'a Prompt> {
-		let file = path.file.as_ref().ok_or(anyhow!("Path must have a 'file' key"))?;
-		Self::get(prompts, &path.prompt, file)
+	pub fn get_from_path<'a>(prompts: &'a Prompts, path: &PathEntry) -> Result<&'a Prompt> {
+		Self::get(prompts, &path.prompt, &path.file)
 	}
 
 	/// Validates this prompt's choices using [`Choice::validate`].

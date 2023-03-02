@@ -20,11 +20,11 @@ pub enum InputContext {
 impl InputContext {
 	const PROMPT: &'static str = "> ";
 
-	pub fn prompt(&self) -> &str {
+	pub fn prompt(&self) -> String {
 		use InputContext::*;
 		match self {
-			Choices(_) => Self::PROMPT,
-			Variable(_, prompt) => prompt.as_deref().unwrap_or(Self::PROMPT)
+			Choices(_) => Self::PROMPT.to_owned(),
+			Variable(_, prompt) => prompt.clone().map(|s| format!("{s}: ")).unwrap_or(Self::PROMPT.to_owned())
 		}
 	}
 }
@@ -33,7 +33,7 @@ pub struct VariableInputResult(pub String, pub String);
 
 impl VariableInputResult {
 	pub fn to_variable_entry(&self, variables: &Variables) -> (&String, VariableEntry) {
-		(&self.0, VariableEntry::new(&self.0, &self.1, variables))
+		(&self.0, VariableEntry::new(&self.0, self.1.clone(), variables))
 	}
 }
 
@@ -83,7 +83,7 @@ impl InputController {
 
 	pub fn take(&mut self, context: &InputContext) -> Result<InputResult> {
 		use InputResult::*;
-		match self.rl.readline(context.prompt()) {
+		match self.rl.readline(&context.prompt()) {
 			Ok(line) => {
 				if self.quit {
 					self.quit = false;

@@ -48,6 +48,8 @@ pub struct VariableInput {
 /// A map of display variables wherein the key is the variable name and the value is the variable's display.
 pub type Variables = HashMap<String, String>;
 
+pub type VariableApplications = HashMap<String, TemplatableString>;
+
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Choice {
@@ -60,7 +62,7 @@ pub struct Choice {
 	// This is an option for easier defaulting to the config state
 	pub lock: Option<bool>,
 	pub notes: Option<NoteActions>,
-	pub variables: Option<Variables>,
+	pub variables: Option<VariableApplications>,
 	pub log: Option<TemplatableString>,
 	pub info: Option<Vec<TemplatableString>>,
 	pub ending: Option<TextLines>
@@ -73,7 +75,7 @@ impl Choice {
 	/// 
 	/// A choice is valid if:
 	/// - It has either a `jump` or `ending` section
-	/// - Its `jump` section points to a valid prompt
+	/// - Its `jump` section **is not templatable** and points to a valid prompt
 	/// 	- The `file` key has to exist and the `prompt` key has to exist in that [`PromptFile`]
 	/// - It has a `response` section if there is more than one choice in the prompt
 	pub fn validate(&self, local_file: &String, has_company: bool, prompts: &Prompts) -> Result<()> {
@@ -82,9 +84,12 @@ impl Choice {
 				return Err(anyhow!("Lacks `jump` section, but doesn't have an `ending` section"))
 			},
 			Some(jump) => {
-				let file = jump.file.clone().unwrap_or(local_file.clone());
-				let _ = Prompt::get(prompts, &jump.prompt, &file)
-        			.with_context(|| "`jump` section points to invalid prompt")?;
+				if jump.is_not_templatable() {
+					let file = jump.file.as_ref().map(|t| t.content.clone())
+						.unwrap_or(local_file.clone());
+					let _ = Prompt::get(prompts, &jump.prompt.content, &file)
+						.with_context(|| "`jump` section points to invalid prompt")?;
+				}
 			},
 		}
 		if has_company && self.response.is_none() {
@@ -109,17 +114,17 @@ impl Choice {
 	/// 
 	/// If both the input result and this choice's `variables` key are [`None`], returns none.
 	/// Otherwise, returns a combined map based on which inputs are present.
-	pub fn create_variable_entries(&self, input: Option<&VariableInputResult>, variables: &Variables) -> Option<VariableEntries> {
+	pub fn create_variable_entries(&self, input: Option<&VariableInputResult>, variables: &Variables, text_context: &TextContext) -> Result<Option<VariableEntries>> {
 		let input_entry = input.map(|result| result.to_variable_entry(variables));
-		let var_entries = self.variables.clone().map(|vars| VariableEntry::from_map(&vars, variables));
+		let var_entries = self.variables.as_ref().map(|vars| VariableEntry::from_map(&vars, variables, text_context)).invert()?;
 		if input_entry.is_none() && var_entries.is_none() {
-			return None;
+			return Ok(None);
 		}
 		let mut entries = var_entries.unwrap_or(HashMap::new());
 		if let Some((name, entry)) = input_entry {
 			entries.insert(name.clone(), entry);
 		}
-		Some(entries)
+		Ok(Some(entries))
 	}
 
 	/// Constructs a [`HistoryEntry`] based on this choice object. 
@@ -128,11 +133,11 @@ impl Choice {
 	pub fn to_history_entry(&self, latest: &HistoryEntry, input: Option<&VariableInputResult>, config: &Manifest, variables: &Variables, text_context: &TextContext) -> Option<Result<HistoryEntry>> {
 		self.jump.as_ref().map(|jump| {
 			Ok(HistoryEntry {
-				path: jump.fill(&latest.path)?,
+				path: jump.fill(&latest.path, text_context)?,
 				display: self.display,
 				locked: self.lock.unwrap_or(config.settings.history.locked),
 				notes: self.create_note_entries(text_context)?,
-				variables: self.create_variable_entries(input, variables),
+				variables: self.create_variable_entries(input, variables, text_context)?,
 				log: self.log.is_some()
 			})
 		})
