@@ -1,8 +1,7 @@
 use anyhow::{Result, anyhow};
 use clap::Parser;
-use itertools::Itertools;
 
-use crate::{core::{player::Player, prompt::Prompt as PromptUtil, manifest::Manifest, text::{Translations, TextContext}}, game::{gloop::GameLoopResult, main::{Resources, UnlockedInfoPages, InfoPages}}};
+use crate::{core::{player::Player, prompt::Prompt as PromptUtil, manifest::Manifest, text::{Translations, TextContext}, choice::Notes}, game::{gloop::GameLoopResult, main::{Resources, UnlockedInfoPages, InfoPages}}};
 
 #[derive(Parser, Debug, PartialEq)]
 #[command(multicall = true)]
@@ -10,38 +9,17 @@ pub enum RuntimeCommand {
 	#[command(about = "Tries going back a choice")]
 	Back,
 	#[command(about = "Manages the display language")]
-	Lang {
-		#[arg(help = "The language code to switch to. If none, lists all loaded languages")]
-		lang: Option<String>
-	},
-	#[command(about = "Manages info pages")]
-	Info {
-		#[arg(help = "The info page to display. If none, lists all unlocked info pages")]
-		info: Option<String>
-	},
+	Lang,
+	#[command(about = "Displays an info page")]
+	Info,
 	#[command(about = "Displays an action log page")]
-	Log {
-		#[arg(help = "The log page to display. If none, displays the first page", default_value = "0")]
-		page: usize
-	},
+	Log,
 	#[command(about = "Saves the player data")]
 	Save,
 	#[command(about = "Saves and quits the game")]
 	Quit,
-	#[command(about = "Lists the loaded prompt files", hide = true)]
-	Files,
-	#[command(about = "Lists the loaded prompts in a file", hide = true)]
-	Prompts { 
-		#[arg(help = "The keyed prompt file")]
-		file: String 
-	},
-	#[command(about = "Display debug info about a prompt", hide = true)]
-	Prompt { 
-		#[arg(help = "The keyed prompt file")]
-		file: String, 
-		#[arg(help = "The prompt name")]
-		name: String 
-	},
+	#[command(about = "Displays debug info about a prompt", hide = true)]
+	Prompt,
 	#[command(about = "Lists the currently applied notes", hide = true)]
 	Notes,
 	#[command(about = "Lists the currently applied variable names and their values", hide = true)]
@@ -56,15 +34,18 @@ pub enum CommandResult {
 	Output(String)
 }
 
+impl CommandResult {
+	pub fn retry() -> CommandResult {
+		Self::Submit(GameLoopResult::Retry(true))
+	}
+}
+
 impl RuntimeCommand {
 	/// Determines if this command is allowed in a default, non-debug environment.
 	fn is_normal(&self) -> bool {
 		use RuntimeCommand::*;
 		match self {
-			Back | Save | Quit => true,
-			Lang { lang: _ } => true,
-			Info { info: _ } => true,
-			Log { page: _ } => true,
+			Back | Save | Quit | Lang | Info | Log => true,
 			_ => false
 		}
 	}
@@ -79,62 +60,87 @@ impl RuntimeCommand {
 	}
 
 	/// Handles a [`Lang`](RuntimeCommand::Lang) command.
-	fn lang(lang: &Option<String>, player: &mut Player, translations: &Translations) -> Result<CommandResult> {
-		use CommandResult::*;
-		let result = match lang {
-			Some(code) => {
-				if !translations.contains_key(code) {
-					return Err(anyhow!("Invalid display language"));
-				}
-				player.lang = code.clone();
-				Output(format!("Set display language to '{code}'"))
-			},
-			None => {
-				if translations.is_empty() {
-					return Err(anyhow!("No display languages loaded"));
-				}
-				Output(translations.keys().join(", "))
-			}
-		};
-		Ok(result)
+	fn lang(player: &mut Player, translations: &Translations) -> Result<CommandResult> {
+		if translations.is_empty() {
+			return Err(anyhow!("No display languages loaded"));
+		}
+
+		println!();
+
+		let lang_question = requestty::Question::select("choose_lang")
+    		.message("Select a language")
+			.choices(translations.keys())
+			.build();
+		let lang_choice = requestty::prompt_one(lang_question)?;
+		player.lang = lang_choice.as_list_item().unwrap().text.clone();
+
+		Ok(CommandResult::retry())
 	}
 
 	/// Handles an [`Info`](RuntimeCommand::Info) command.
-	fn info(info: &Option<String>, unlocked_pages: &UnlockedInfoPages, pages: &InfoPages) -> Result<CommandResult> {
-		use CommandResult::*;
-		match info {
-			Some(key) => {
-				if !unlocked_pages.contains(key) {
-					return Err(anyhow!("Invalid info page"))
-				}
-				let page = pages.get(key).unwrap();
-				println!();
-				termimad::print_text(page);
-			},
-			None => {
-				if unlocked_pages.is_empty() {
-					return Err(anyhow!("No info pages unlocked"))
-				}
-				return Ok(Output(itertools::join(unlocked_pages, ", ")))
-			}
+	fn info(unlocked_pages: &UnlockedInfoPages, pages: &InfoPages) -> Result<CommandResult> {
+		if unlocked_pages.is_empty() {
+			return Err(anyhow!("No info pages unlocked"))
 		}
-		Ok(CommandResult::Submit(GameLoopResult::Retry(true)))
+
+		println!();
+		
+		let info_question = requestty::Question::select("choose_info")
+			.message("Select an info page")
+			.choices(unlocked_pages)
+			.build();
+		let info_choice = requestty::prompt_one(info_question)?;
+
+		println!();
+		termimad::print_text(pages.get(&info_choice.as_list_item().unwrap().text).unwrap());
+
+		Ok(CommandResult::retry())
 	}
 
 	/// Handles a [`Log`](RuntimeCommand::Log) command.
-	fn log(log: &Vec<String>, page: usize) -> Result<CommandResult> {
+	fn log(log: &Vec<String>) -> Result<CommandResult> {
 		if log.is_empty() {
 			return Err(anyhow!("No log entries to display"))
 		}
+
+		println!();
+
 		let pages: Vec<&[String]> = log.chunks(5).collect();
-		let pages_len = pages.len();
-		match pages.get(page) {
-			Some(&content) => {
-				let entries = content.join("\n\n");
-				Ok(CommandResult::Output(format!("\n{entries}\n\nPage {}/{pages_len}", page + 1)))
-			},
-			None => Err(anyhow!("Page does not exist (max: {pages_len})"))
-		}
+		let page_choices: Vec<String> = pages.iter()
+			.map(|chunk| chunk[0][..25].to_owned())
+			.map(|line| format!("{line}..."))
+			.collect();
+		let page_question = requestty::Question::raw_select("choose_page")
+    		.message("Log page")
+			.choices(page_choices)
+			.build();
+		let page_choice = requestty::prompt_one(page_question)?;
+
+		let page_content = pages.get(page_choice.as_list_item().unwrap().index).unwrap();
+		let entries = page_content.join("\n\n");
+		Ok(CommandResult::Output(format!("\n{entries}")))
+	}
+
+	/// Handles a [`Prompt`](RuntimeCommand::Prompt) command.
+	fn prompt(notes: &Notes, resources: &Resources, text_context: &TextContext) -> Result<CommandResult> {
+		println!();
+
+		let file_question = requestty::Question::select("choose_file")
+			.message("Prompt file")
+			.choices(resources.prompts.keys())
+			.build();
+		let file_choice = requestty::prompt_one(file_question)?;
+		let file = &file_choice.as_list_item().unwrap().text;
+
+		let prompt_question = requestty::Question::select("choose_prompt")
+			.message(format!("Prompt in '{}'", file))
+			.choices(PromptUtil::get_file(&resources.prompts, file)?.keys())
+			.build();
+		let prompt_choice = requestty::prompt_one(prompt_question)?;
+		let prompt_name = &prompt_choice.as_list_item().unwrap().text;
+
+		let prompt = PromptUtil::get(&resources.prompts, prompt_name, file)?;
+		Ok(CommandResult::Output(prompt.debug_info(prompt_name, file, &resources.prompts, notes, text_context)?))
 	}
 
 	/// Handles a [`Notes`](RuntimeCommand::Notes) command.
@@ -169,23 +175,15 @@ impl RuntimeCommand {
 		use CommandResult::*;
 		let result = match self {
 			Back => Self::back(player)?,
-			Lang { lang } => Self::lang(lang, player, &resources.translations)?,
-			Info { info } => Self::info(info, &player.info_pages, &resources.info_pages)?,
-			Log { page } => Self::log(&player.log, *page)?,
+			Lang => Self::lang(player, &resources.translations)?,
+			Info => Self::info(&player.info_pages, &resources.info_pages)?,
+			Log => Self::log(&player.log)?,
 			Save => {
 				player.save();
 				Output("Saving... ".to_owned())
 			}
 			Quit => Submit(GameLoopResult::Shutdown(false)),
-			Files => Output(resources.prompts.keys().join(", ")),
-			Prompts { file } => {
-				let prompt_file = PromptUtil::get_file(&resources.prompts, file)?;
-				Output(prompt_file.keys().join(", "))
-			},
-			Prompt { file, name } => {
-				let prompt = PromptUtil::get(&resources.prompts, name, file)?;
-				Output(prompt.debug_info(name, file, &resources.prompts, &player.notes, text_context)?)
-			}
+			Prompt => Self::prompt(&player.notes, resources, text_context)?,
 			Notes => Self::notes(player)?,
 			Variables => Self::variables(player)?
 		};

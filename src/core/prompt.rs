@@ -57,7 +57,7 @@ pub type Prompts = Contents<Prompt>;
 
 impl Prompt {
 	/// Finds a specific prompt file within a [`Prompts`] object.
-	pub fn get_file<'a>(prompts: &'a Prompts, file: &String) -> Result<&'a PromptFile> {
+	pub fn get_file<'a>(prompts: &'a Prompts, file: &str) -> Result<&'a PromptFile> {
 		prompts.get(file)
 			.ok_or(anyhow!("Invalid prompt file '{file}'"))
 	}
