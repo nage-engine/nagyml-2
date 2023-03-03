@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::{loading::parse, input::controller::VariableInputResult};
 
-use super::{choice::{NoteApplication, Notes, Variables, NoteActions, Choice, VariableApplications}, manifest::Manifest, text::{TextContext, TemplatableString}, resources::{UnlockedInfoPages, Resources}};
+use super::{choice::{NoteApplication, Notes, Variables, Choice, VariableApplications}, manifest::Manifest, text::{TextContext, TemplatableString}, resources::{UnlockedInfoPages, Resources}};
 
 #[derive(Serialize, Deserialize, Debug)]
 /// A single variable value recording.
@@ -47,13 +47,19 @@ pub struct NoteEntry {
 	pub take: bool
 }
 
+pub type NoteEntries = Vec<NoteEntry>;
+
 impl NoteEntry {
-	pub fn from_application(app: &NoteApplication, text_context: &TextContext) -> Result<Self> {
+	pub fn new(name: &TemplatableString, take: bool, text_context: &TextContext) -> Result<Self> {
 		let entry = NoteEntry { 
-			value: app.name.fill(text_context)?, 
-			take: app.take
+			value: name.fill(text_context)?, 
+			take
 		};
 		Ok(entry)
+	}
+
+	pub fn from_application(app: &NoteApplication, text_context: &TextContext) -> Result<Self> {
+		Self::new(&app.name, app.take, text_context)
 	}
 }
 
@@ -62,8 +68,6 @@ pub struct PathEntry {
 	pub file: String,
 	pub prompt: String
 }
-
-pub type NoteEntries = Vec<NoteEntry>;
 
 #[derive(Serialize, Deserialize, Debug)]
 /// A reversible recording of a prompt jump.
@@ -163,21 +167,6 @@ impl Player {
 		Ok(())
 	}
 
-	/// Accepts a [`NoteActions`] object.
-	/// 
-	/// Uses [`Self::apply_note`] for note applications and attempts to insert the `once` value.
-	pub fn accept_note_actions(&mut self, actions: &NoteActions, text_context: &TextContext) -> Result<()> {
-		if let Some(apps) = &actions.apply {
-			for app in apps {
-				self.apply_note(&app.name.fill(text_context)?, app.take, false)?;
-			}
-		}
-		if let Some(once) = &actions.once {
-			self.notes.insert(once.fill(text_context)?);
-		}
-		Ok(())
-	}
-
 	/// Returns the latest history entry, if any.
 	pub fn latest_entry(&self) -> Result<&HistoryEntry> {
 		self.history.back().ok_or(anyhow!("History empty"))
@@ -192,23 +181,8 @@ impl Player {
 		Ok(player.history.pop_back().unwrap())
 	}
 
-	/// Appends a new entry to the history data based on what happened during the last input loop.
-	/// 
-	/// There must always be at least one history entry to take modifications from.
-	/// Additionally, this call respect's the game's [`HistorySettings`] and prunes the front of the history list based on the size.
-	pub fn push_history(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, text_context: &TextContext) -> Result<()> {
-		let latest = self.latest_entry()?;
-		if let Some(entry) = choice.to_history_entry(&latest, input, config, &self.variables, text_context) {
-			self.history.push_back(entry?);
-		}
-		if self.history.len() > config.settings.history.size {
-			self.history.pop_front();
-		}
-		Ok(())
-	}
-
 	/// Pops the latest [`HistoryEntry`] off the stack using [`Player::pop_latest_entry`] and reverses its effects.
-	pub fn reverse_history(&mut self) -> Result<()> {
+	pub fn back(&mut self) -> Result<()> {
 		let latest = Self::pop_latest_entry(self)?;
 		if let Some(apps) = &latest.notes {
 			for app in apps {
@@ -229,7 +203,7 @@ impl Player {
 		Ok(())
 	}
 
-	/// Pushes a new history entry using [`Player::push_history`] and applies choice data.
+	/// Applies the effects of a new history entry along with choice data.
 	/// 
 	/// The following data is applied:
 	/// - `notes` actions
@@ -239,17 +213,19 @@ impl Player {
 	/// The applied data is sensitive and relies on the previous unaltered state.
 	/// For this reason, `log` data, which relies on the altered state, is **not** applied in this function.
 	/// To combine this choosing functionality with `log` entry pushes, use [`Player:choose_full`].
-	pub fn choose(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, text_context: &TextContext) -> Result<()> {
-		self.push_history(choice, input, config, text_context)?;
-		if let Some(actions) = &choice.notes {
-			self.accept_note_actions(actions, text_context)?;
+	fn apply_entry(&mut self, entry: &HistoryEntry, choice: &Choice, text_context: &TextContext) -> Result<()> {
+		if let Some(entries) = &entry.notes {
+			for entry in entries {
+				self.apply_note(&entry.value, entry.take, false)?;
+			}
 		}
-		if let Some(variables) = &choice.variables {
-			let filled = variables.iter()
-    			.map(|(name, value)| value.fill(text_context).map(|v| (name.clone(), v)))
-				.collect::<Result<Variables>>()?;
-			self.variables.extend(filled);
+		if let Some(variables) = &entry.variables {
+			let values: Variables = variables.iter()
+    			.map(|(k, v)| (k.clone(), v.value.clone()))
+				.collect();
+			self.variables.extend(values);
 		}
+		// Info pages are not stored in history entries, so we can fill the name here
 		if let Some(pages) = &choice.info {
 			for page in pages {
 				self.info_pages.insert(page.fill(text_context)?);
@@ -258,9 +234,24 @@ impl Player {
 		Ok(())
 	}
 
+
+	pub fn choose(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, text_context: &TextContext) -> Result<()> {
+		let latest = self.latest_entry()?;
+		if let Some(result) = choice.to_history_entry(&latest, input, config, &self.variables, text_context) {
+			let entry = result?;
+			self.apply_entry(&entry, choice, text_context)?;
+			self.history.push_back(entry);
+			if self.history.len() > config.settings.history.size {
+				self.history.pop_front();
+			}
+		}
+		Ok(())
+	}
+
 	pub fn try_push_log(&mut self, choice: &Choice, config: &Manifest, resources: &Resources) -> Result<()> {
 		if let Some(log) = &choice.log {
 			// Create a new text context using the new variable and note values for the logs
+			// Log page names are not stored in history entries, just whether they were given, so we can fill the name here
 			let new_text_context = TextContext::new(config, self.notes.clone(), self.variables.clone(), &self.lang, resources);
 			self.log.push(log.fill(&new_text_context)?);
 		}

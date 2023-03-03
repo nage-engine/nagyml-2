@@ -34,6 +34,23 @@ pub struct NoteActions {
 	pub once: Option<TemplatableString>
 }
 
+impl NoteActions {
+	pub fn to_note_entries(&self, text_context: &TextContext) -> Result<NoteEntries> {
+		let mut entries: NoteEntries = self.apply.as_ref().map(|apps| {
+			apps.iter()
+				.map(|app| NoteEntry::from_application(app, text_context))
+				.collect::<Result<NoteEntries>>()
+		})
+		.invert()?
+		.unwrap_or(Vec::new());
+
+		if let Some(once) = &self.once {
+			entries.push(NoteEntry::new(once, false, text_context)?);
+		}
+		Ok(entries)
+	}
+}
+
 /// A list of string symbols tracked on a player.
 pub type Notes = HashSet<String>;
 
@@ -98,18 +115,6 @@ impl Choice {
 		Ok(())
 	}
 
-	pub fn create_note_entries(&self, text_context: &TextContext) -> Result<Option<NoteEntries>> {
-		self.notes.as_ref().map(|actions| {
-			actions.apply.as_ref().map(|apps| {
-				apps.iter()
-        			.map(|app| NoteEntry::from_application(app, text_context))
-        			.collect()
-			})
-		})
-		.flatten()
-		.invert()
-	}
-
 	/// Creates a map of variable entries to use when creating a new [`HistoryEntry`].
 	/// 
 	/// If both the input result and this choice's `variables` key are [`None`], returns none.
@@ -136,7 +141,7 @@ impl Choice {
 				path: jump.fill(&latest.path, text_context)?,
 				display: self.display,
 				locked: self.lock.unwrap_or(config.settings.history.locked),
-				notes: self.create_note_entries(text_context)?,
+				notes: self.notes.as_ref().map(|n| n.to_note_entries(text_context)).invert()?,
 				variables: self.create_variable_entries(input, variables, text_context)?,
 				log: self.log.is_some()
 			})

@@ -55,7 +55,7 @@ impl RuntimeCommand {
 		if player.history.len() <= 1 {
 			return Err(anyhow!("Can't go back right now!"));
 		}
-		player.reverse_history()?;
+		player.back()?;
 		Ok(CommandResult::Submit(GameLoopResult::Continue))
 	}
 
