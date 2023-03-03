@@ -3,6 +3,7 @@ name = "nage"
 version = "2.0.0"
 edition = "2021"
 authors = [ "acikek" ]
+description = "Not Another Game Engine; command-line text adventure engine"
 homepage = "https://github.com/acikek/nage-2#README"
 repository = "https://github.com/acikek/nage-2"
 license = "MIT"
