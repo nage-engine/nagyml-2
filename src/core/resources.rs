@@ -1,10 +1,10 @@
-use std::{collections::{HashMap, HashSet}, path::PathBuf, fs::File, io::BufReader};
+use std::{collections::{HashMap, HashSet}, path::PathBuf};
 
-use anyhow::{Result, anyhow};
+use anyhow::Result;
 
 use crate::loading::{load_content, get_content_iterator, load_files};
 
-use super::{scripts::Scripts, text::{Translations, TranslationFile, TemplatableString, TextContext}, prompt::{Prompts, Prompt}};
+use super::{scripts::Scripts, text::{Translations, TranslationFile}, prompt::{Prompts, Prompt}};
 
 pub type InfoPages = HashMap<String, String>;
 pub type UnlockedInfoPages = HashSet<String>;
