@@ -4,9 +4,9 @@ use anyhow::Result;
 use serde::{Serialize, Deserialize};
 use snailshell::snailprint_s;
 
-use crate::{loading::{Contents, ContentFile}, game::main::Resources};
+use crate::loading::{Contents, ContentFile};
 
-use super::{choice::{Variables, Notes}, manifest::{Manifest, Metadata}, scripts::Scripts};
+use super::{choice::{Variables, Notes}, manifest::{Manifest, Metadata}, scripts::Scripts, resources::Resources};
 
 pub struct TextContext<'a> {
 	config: &'a Manifest,

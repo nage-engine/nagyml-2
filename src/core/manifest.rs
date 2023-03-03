@@ -2,9 +2,9 @@ use anyhow::{Result, anyhow, Context};
 use semver::Version;
 use serde::Deserialize;
 
-use crate::{loading::parse, game::main::UnlockedInfoPages};
+use crate::loading::parse;
 
-use super::{choice::{Variables, Notes}, text::{TextSpeed, TextLines}, player::PathEntry};
+use super::{choice::{Variables, Notes}, text::{TextSpeed, TextLines}, player::PathEntry, resources::UnlockedInfoPages};
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]

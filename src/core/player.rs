@@ -3,9 +3,9 @@ use std::{collections::{HashMap, HashSet, VecDeque}, vec};
 use anyhow::{Result, Context, anyhow};
 use serde::{Serialize, Deserialize};
 
-use crate::{loading::parse, input::controller::VariableInputResult, game::main::{UnlockedInfoPages, Resources}};
+use crate::{loading::parse, input::controller::VariableInputResult};
 
-use super::{choice::{NoteApplication, Notes, Variables, NoteActions, Choice, VariableApplications}, manifest::Manifest, text::{TextContext, TemplatableString}};
+use super::{choice::{NoteApplication, Notes, Variables, NoteActions, Choice, VariableApplications}, manifest::Manifest, text::{TextContext, TemplatableString}, resources::{UnlockedInfoPages, Resources}};
 
 #[derive(Serialize, Deserialize, Debug)]
 /// A single variable value recording.

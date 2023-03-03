@@ -1,9 +1,7 @@
 use anyhow::Result;
 use result::OptionResultExt;
 
-use crate::{core::{player::Player, manifest::Manifest, text::{Text, TextContext}, choice::Choice, prompt::PromptModel}, input::{controller::{InputContext, InputController, InputResult}, commands::{RuntimeCommand, CommandResult}}};
-
-use super::main::Resources;
+use crate::{core::{player::Player, manifest::Manifest, text::{Text, TextContext}, choice::Choice, prompt::PromptModel, resources::Resources}, input::{controller::{InputContext, InputController, InputResult}, commands::{RuntimeCommand, CommandResult}}};
 
 pub enum GameLoopResult {
 	Retry(bool),

@@ -28,7 +28,7 @@ pub fn load<T>(path: &PathBuf) -> Result<T> where T: DeserializeOwned {
 /// 
 /// Each entry in the iterator is a tuple of the actual path and the file "key", 
 /// wherein the key is formatted as `relative/dir/file_name`, without the preceding input directory and file extension.
-pub fn get_content_iterator(path: &str) -> impl Iterator<Item = (PathBuf, String)> {
+pub fn get_content_iterator(path: &str) -> impl Iterator<Item = (String, PathBuf)> {
 	let prefix = format!("{path}/");
 	WalkDir::new(path)
 		.into_iter()
@@ -37,20 +37,20 @@ pub fn get_content_iterator(path: &str) -> impl Iterator<Item = (PathBuf, String
 		.map(move |e| {
 			let file_path = e.path().to_path_buf();
 			let key_path = file_path.strip_prefix(&prefix).unwrap().with_extension("");
-			(file_path, key_path.as_os_str().to_str().unwrap().to_owned())
+			(key_path.as_os_str().to_str().unwrap().to_owned(), file_path)
 		})
 }
 
 /// Iterates over files using [`get_content_iterator`], reads them, and combines their content into a [`String`] map.
 pub fn load_files(path: &str) -> Result<HashMap<String, String>> {
 	get_content_iterator(path)
-    	.map(|(path, key)| Ok((key, std::fs::read_to_string(path)?)))
+    	.map(|(key, path)| Ok((key, std::fs::read_to_string(path)?)))
     	.collect()
 }
 
 /// Iterates over content files using [`get_content_iterator`] and combines them into a [`Contents`] map.
 pub fn load_content<T>(path: &str) -> Result<Contents<T>> where T: DeserializeOwned {
 	get_content_iterator(path)	
-		.map(|(path, key)| Ok((key, load(&path.to_path_buf())?)))
+		.map(|(key, path)| Ok((key, load(&path.to_path_buf())?)))
 		.collect()
 }

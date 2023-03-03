@@ -1,42 +1,8 @@
-use std::collections::{HashMap, HashSet};
-
 use anyhow::{Result, anyhow};
 
-use crate::{input::controller::InputController, loading::{load_content, load_files}, core::{prompt::{Prompts, Prompt, PromptModel}, text::{Translations, Text, TextContext, TranslationFile}, manifest::Manifest, player::Player, scripts::Scripts}};
+use crate::{input::controller::InputController, core::{prompt::{Prompt, PromptModel}, text::{Text, TextContext}, manifest::Manifest, player::Player, resources::Resources}};
 
 use super::gloop::{next_input_context, take_input, GameLoopResult};
-
-pub type InfoPages = HashMap<String, String>;
-pub type UnlockedInfoPages = HashSet<String>;
-
-#[derive(Debug)]
-pub struct Resources {
-	pub prompts: Prompts,
-	pub translations: Translations,
-	pub info_pages: InfoPages,
-	pub scripts: Scripts
-}
-
-impl Resources {
-	pub fn load() -> Result<Self> {
-		let result = Resources {
-			prompts: load_content("prompts")?,
-			translations: load_content("lang")?,
-			info_pages: load_files("info")?,
-			scripts: Scripts::load()?
-		};
-		Ok(result)
-	}
-
-	pub fn validate(&self) -> Result<()> {
-		let _ = Prompt::validate_all(&self.prompts)?;
-		Ok(())
-	}
-
-	pub fn lang_file(&self, lang: &str) -> Option<&TranslationFile> {
-		self.translations.get(lang)
-	}
-}
 
 pub fn first_play_init(config: &Manifest, player: &mut Player, resources: &Resources) -> Result<()> {
 	if let Some(background) = &config.entry.background {

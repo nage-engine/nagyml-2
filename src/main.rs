@@ -1,10 +1,10 @@
 #![feature(result_flattening)]
 #![feature(iterator_try_collect)]
 
-use crate::core::{manifest::Manifest, player::Player};
+use crate::core::{manifest::Manifest, player::Player, resources::Resources};
 
 use anyhow::{Result, Context};
-use game::main::{Resources, begin, crash_context, shutdown};
+use game::main::{begin, crash_context, shutdown};
 use input::controller::InputController;
 
 mod core;
