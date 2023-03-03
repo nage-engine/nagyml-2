@@ -1,7 +1,13 @@
 [package]
 name = "nage"
-version = "0.1.0"
+version = "2.0.0"
 edition = "2021"
+authors = [ "acikek" ]
+homepage = "https://github.com/acikek/nage-2#README"
+repository = "https://github.com/acikek/nage-2"
+license = "MIT"
+keywords = [ "nage", "not", "another", "game", "engine" ]
+categories = [ "command-line-utilities", "games", "game-engines", "game-development" ]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -13,7 +19,6 @@ format_serde_error = "0.3.0"
 walkdir = "2"
 anyhow = "1.0.69"
 snailshell = "0.3.1"
-ctrlc = "3.2.5"
 rustyline = "10.1.1"
 clap = { version = "4.1.6", features = [ "derive" ] }
 itertools = "0.10.5"
