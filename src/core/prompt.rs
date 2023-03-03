@@ -183,7 +183,11 @@ impl Prompt {
     		.collect();
 		let id_and_model = format!("ID: {file}/{name}\n{model}");
 		let choices = format!("{choices_amt} choice(s)\n{usable_choices} of them accessible");
-		let jumps = format!("Prompts that jump here:\n{}", external_jumps.join("\n"));
-		Ok(format!("\n{id_and_model}\n\n{choices}\n\n{jumps}"))
+		let jumps = if external_jumps.is_empty() {
+			String::new()
+		} else {
+			format!("\n\nPrompts that jump here:\n{}", external_jumps.join("\n"))
+		};
+		Ok(format!("\n{id_and_model}\n\n{choices}{jumps}"))
 	}
 }
