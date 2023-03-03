@@ -5,7 +5,7 @@ use serde::{Serialize, Deserialize};
 
 use crate::{loading::parse, input::controller::VariableInputResult};
 
-use super::{choice::{NoteApplication, Notes, Variables, Choice, VariableApplications}, manifest::Manifest, text::{TextContext, TemplatableString}, resources::{UnlockedInfoPages, Resources}};
+use super::{choice::{NoteApplication, Notes, Variables, Choice, VariableApplications}, manifest::Manifest, text::{TextContext, TemplatableString}, resources::{UnlockedInfoPages, Resources}, prompt::PromptModel};
 
 #[derive(Serialize, Deserialize, Debug)]
 /// A single variable value recording.
@@ -78,6 +78,8 @@ pub struct HistoryEntry {
 	pub display: bool,
 	/// Whether this history entry can be reversed according to [`Choice::lock`].
 	pub locked: bool,
+	/// Whether this entry was a jump with no player input.
+	pub redirect: bool,
 	/// The note actions executed during this entry, if any.
 	pub notes: Option<NoteEntries>,
 	/// The variables applied during this entry, if any.
@@ -93,6 +95,7 @@ impl HistoryEntry {
 			path: path.clone(),
 			display: true,
 			locked: false,
+			redirect: false,
 			notes: None,
 			variables: None,
 			log: false
@@ -183,22 +186,27 @@ impl Player {
 
 	/// Pops the latest [`HistoryEntry`] off the stack using [`Player::pop_latest_entry`] and reverses its effects.
 	pub fn back(&mut self) -> Result<()> {
-		let latest = Self::pop_latest_entry(self)?;
-		if let Some(apps) = &latest.notes {
-			for app in apps {
-				self.apply_note(&app.value, app.take, true)?;
+		loop {
+			let latest = Self::pop_latest_entry(self)?;
+			if let Some(apps) = &latest.notes {
+				for app in apps {
+					self.apply_note(&app.value, app.take, true)?;
+				}
 			}
-		}
-		if let Some(vars) = latest.variables {
-			for (name, variable_entry) in vars {
-				match variable_entry.previous {
-					Some(previous) => self.variables.insert(name, previous),
-					None => self.variables.remove(&name)
-				};
+			if let Some(vars) = latest.variables {
+				for (name, variable_entry) in vars {
+					match variable_entry.previous {
+						Some(previous) => self.variables.insert(name, previous),
+						None => self.variables.remove(&name)
+					};
+				}
 			}
-		}
-		if latest.log {
-			self.log.pop();
+			if latest.log {
+				self.log.pop();
+			}
+			if !latest.redirect {
+				break;
+			}
 		}
 		Ok(())
 	}
@@ -235,9 +243,9 @@ impl Player {
 	}
 
 
-	pub fn choose(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, text_context: &TextContext) -> Result<()> {
+	pub fn choose(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, model: &PromptModel, text_context: &TextContext) -> Result<()> {
 		let latest = self.latest_entry()?;
-		if let Some(result) = choice.to_history_entry(&latest, input, config, &self.variables, text_context) {
+		if let Some(result) = choice.to_history_entry(&latest, input, config, &self.variables, model, text_context) {
 			let entry = result?;
 			self.apply_entry(&entry, choice, text_context)?;
 			self.history.push_back(entry);
@@ -258,8 +266,8 @@ impl Player {
 		Ok(())
 	}
 
-	pub fn choose_full(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, resources: &Resources, text_context: &TextContext) -> Result<()> {
-		self.choose(choice, input, config, text_context)?;
+	pub fn choose_full(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, resources: &Resources, model: &PromptModel, text_context: &TextContext) -> Result<()> {
+		self.choose(choice, input, config, model, text_context)?;
 		self.try_push_log(choice, config, resources)
 	}
 }

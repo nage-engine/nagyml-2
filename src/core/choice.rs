@@ -2,7 +2,7 @@ use std::{collections::{HashMap, HashSet}};
 
 use crate::input::controller::VariableInputResult;
 
-use super::{text::{Text, TextLines, TemplatableString, TextContext}, path::Path, prompt::{Prompts, Prompt}, player::{HistoryEntry, VariableEntry, VariableEntries, NoteEntry, NoteEntries}, manifest::Manifest};
+use super::{text::{Text, TextLines, TemplatableString, TextContext}, path::Path, prompt::{Prompts, Prompt, PromptModel}, player::{HistoryEntry, VariableEntry, VariableEntries, NoteEntry, NoteEntries}, manifest::Manifest};
 
 use anyhow::{Result, anyhow, Context};
 use result::OptionResultExt;
@@ -135,12 +135,13 @@ impl Choice {
 	/// Constructs a [`HistoryEntry`] based on this choice object. 
 	/// 
 	/// Copies over control flags, the path based on the latest history entry, and notes and variable applications.
-	pub fn to_history_entry(&self, latest: &HistoryEntry, input: Option<&VariableInputResult>, config: &Manifest, variables: &Variables, text_context: &TextContext) -> Option<Result<HistoryEntry>> {
+	pub fn to_history_entry(&self, latest: &HistoryEntry, input: Option<&VariableInputResult>, config: &Manifest, variables: &Variables, model: &PromptModel, text_context: &TextContext) -> Option<Result<HistoryEntry>> {
 		self.jump.as_ref().map(|jump| {
 			Ok(HistoryEntry {
 				path: jump.fill(&latest.path, text_context)?,
 				display: self.display,
 				locked: self.lock.unwrap_or(config.settings.history.locked),
+				redirect: matches!(model, PromptModel::Redirect(_)),
 				notes: self.notes.as_ref().map(|n| n.to_note_entries(text_context)).invert()?,
 				variables: self.create_variable_entries(input, variables, text_context)?,
 				log: self.log.is_some()

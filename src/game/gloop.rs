@@ -20,9 +20,9 @@ pub fn handle_quit(shutdown: bool) -> GameLoopResult {
 	}
 }
 
-pub fn handle_choice(choice: &Choice, config: &Manifest, player: &mut Player, resources: &Resources, text_context: &TextContext) -> Result<GameLoopResult> {
+pub fn handle_choice(choice: &Choice, config: &Manifest, player: &mut Player, resources: &Resources, model: &PromptModel, text_context: &TextContext) -> Result<GameLoopResult> {
 	use GameLoopResult::*;
-	player.choose_full(choice, None, config, resources, text_context)?;
+	player.choose_full(choice, None, config, resources, model, text_context)?;
 	if let Some(ending) = &choice.ending {
 		println!();
 		Text::print_lines(ending, text_context)?;
@@ -49,7 +49,7 @@ pub fn handle_command(parse: Result<RuntimeCommand>, config: &Manifest, player: 
 	Ok(GameLoopResult::Retry(parse.is_ok()))
 }
 
-pub fn take_input(input: &mut InputController, context: &InputContext, config: &Manifest, player: &mut Player, resources: &Resources, text_context: &TextContext, choices: &Vec<&Choice>) -> Result<GameLoopResult> {
+pub fn take_input(input: &mut InputController, context: &InputContext, config: &Manifest, player: &mut Player, resources: &Resources, model: &PromptModel, text_context: &TextContext, choices: &Vec<&Choice>) -> Result<GameLoopResult> {
 	use GameLoopResult::*;
 	let result = match input.take(context) {
 		Err(err) => {
@@ -58,10 +58,10 @@ pub fn take_input(input: &mut InputController, context: &InputContext, config: &
 		},
 		Ok(result) => match result {
 			InputResult::Quit(shutdown) => handle_quit(shutdown),
-			InputResult::Choice(i) => handle_choice(choices[i - 1], config, player, resources, text_context)?,
+			InputResult::Choice(i) => handle_choice(choices[i - 1], config, player, resources, model, text_context)?,
 			InputResult::Variable(result) => {
 				// Modify variables after the choose call since history entries are sensitive to this order
-				player.choose(choices[0], Some(&result), config, text_context)?;
+				player.choose(choices[0], Some(&result), config, model, text_context)?;
 				player.variables.insert(result.0.clone(), result.1.clone());
 				player.try_push_log(choices[0], config, resources)?;
 				Continue
