@@ -1,6 +1,7 @@
 use std::{fmt::Display, time::Duration};
 
 use anyhow::Result;
+use crossterm::style::Stylize;
 use serde::{Serialize, Deserialize};
 use snailshell::snailprint_s;
 
@@ -120,7 +121,9 @@ pub enum TextMode {
 	/// Wraps text in quotes.
 	Dialogue,
 	/// Returns text as-is.
-	Action
+	Action,
+	/// Prefixes text with a quote character.
+	System
 }
 
 impl Default for TextMode {
@@ -137,7 +140,8 @@ impl TextMode {
 		use TextMode::*;
 		match self {
 			Dialogue => format!("\"{text}\""),
-			Action => text.to_owned()
+			Action => text.to_owned(),
+			System => format!("{} {text}", "▐".dark_grey())
 		}
 	}
 }
