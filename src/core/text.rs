@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, time::Duration};
 
 use anyhow::Result;
 use serde::{Serialize, Deserialize};
@@ -187,7 +187,8 @@ pub struct Text {
 	#[serde(default)]
 	/// The mode in which the text content should be formatted upon retrieval.
 	pub mode: TextMode,
-	pub speed: Option<TextSpeed>
+	pub speed: Option<TextSpeed>,
+	pub wait: Option<u64>
 }
 
 /// An ordered list of text objects.
@@ -210,6 +211,9 @@ impl Text {
 	pub fn print(&self, context: &TextContext) -> Result<()> {
 		let speed = self.speed.as_ref().unwrap_or(&context.config.settings.speed);
 		speed.print(&self.get(context)?);
+		if let Some(wait) = self.wait {
+			std::thread::sleep(Duration::from_millis(wait));
+		}
 		Ok(())
 	}
 
