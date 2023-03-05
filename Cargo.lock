@@ -887,9 +887,9 @@ dependencies = [
 
 [[package]]
 name = "minimad"
-version = "0.10.0"
+version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fed1b13e2000bd8e238d97a97de6fc30224f89a08b0aa5aaa09ed1bd68ba2fa1"
+checksum = "7f0c6050964e706796ad6e94b036ab0b7ca97e871905e1caab6b6771366e946d"
 dependencies = [
  "once_cell",
 ]
@@ -994,14 +994,14 @@ dependencies = [
 
 [[package]]
 name = "nix"
-version = "0.25.1"
+version = "0.26.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f346ff70e7dbfd675fe90590b92d59ef2de15a8779ae305ebcbfd3f0caf59be4"
+checksum = "bfdda3d196821d6af13126e40375cdf7da646a96114af134d5f417a9a1dc8e1a"
 dependencies = [
- "autocfg",
  "bitflags",
  "cfg-if",
  "libc",
+ "static_assertions",
 ]
 
 [[package]]
@@ -1452,9 +1452,9 @@ dependencies = [
 
 [[package]]
 name = "rustyline"
-version = "10.1.1"
+version = "11.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c1e83c32c3f3c33b08496e0d1df9ea8c64d39adb8eb36a1ebb1440c690697aef"
+checksum = "5dfc8644681285d1fb67a467fb3021bfea306b99b4146b166a1fe3ada965eece"
 dependencies = [
  "bitflags",
  "cfg-if",
@@ -1464,7 +1464,7 @@ dependencies = [
  "libc",
  "log",
  "memchr",
- "nix 0.25.1",
+ "nix 0.26.2",
  "radix_trie",
  "scopeguard",
  "unicode-segmentation",
@@ -1619,6 +1619,12 @@ dependencies = [
  "once_cell",
  "unicode-segmentation",
 ]
+
+[[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "str-buf"
@@ -1856,9 +1862,9 @@ dependencies = [
 
 [[package]]
 name = "termimad"
-version = "0.21.1"
+version = "0.22.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8743d628f9b0eb33087c1e1c4915d91efca23ae69f7c81981489128a0e17d300"
+checksum = "56f87b17ba3babbffcbfe44d5e29fa90d80c5449034a799c9d87017358000e5f"
 dependencies = [
  "coolor",
  "crossbeam",

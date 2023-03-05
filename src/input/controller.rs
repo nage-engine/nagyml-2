@@ -1,6 +1,6 @@
 use anyhow::{Result, anyhow};
 use clap::Parser;
-use rustyline::Editor;
+use rustyline::DefaultEditor;
 
 use crate::core::{player::VariableEntry, choice::Variables};
 
@@ -8,7 +8,7 @@ use super::commands::RuntimeCommand;
 
 #[derive(Debug)]
 pub struct InputController {
-	rl: Editor<()>,
+	rl: DefaultEditor,
 	quit: bool
 }
 
@@ -47,7 +47,7 @@ pub enum InputResult {
 impl InputController {
 	pub fn new() -> Result<Self> {
 		Ok(Self {
-			rl: Editor::new()?,
+			rl: DefaultEditor::new()?,
 			quit: false
 		})
 	}
@@ -89,7 +89,7 @@ impl InputController {
 					self.quit = false;
 				}
 				let result = Self::handle_line(line.trim().to_owned(), context)?;
-				self.rl.add_history_entry(line);
+				self.rl.add_history_entry(line)?;
 				Ok(result)
 			},
 			Err(_) => {
