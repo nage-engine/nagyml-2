@@ -1,3 +1,4 @@
+pub mod audio;
 pub mod choice;
 pub mod manifest;
 pub mod path;

@@ -50,7 +50,8 @@ pub struct Settings {
 	pub debug: bool,
 	pub speed: TextSpeed,
 	pub history: HistorySettings,
-	pub lang: Option<String>
+	pub lang: Option<String>,
+	pub channels: Option<Vec<String>>
 }
 
 impl Default for Settings {
@@ -60,7 +61,8 @@ impl Default for Settings {
 			debug: false,
 			speed: TextSpeed::Delay(5),
 			history: HistorySettings::default(),
-			lang: None
+			lang: None,
+			channels: None
 		}
 	}
 }

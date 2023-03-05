@@ -68,6 +68,29 @@ pub type Variables = HashMap<String, String>;
 pub type VariableApplications = HashMap<String, TemplatableString>;
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum SoundActionMode {
+	Queue,
+	Overwrite,
+	Passive
+}
+
+impl Default for SoundActionMode {
+	fn default() -> Self {
+		Self::Passive
+	}
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(deny_unknown_fields)]
+pub struct SoundAction {
+	pub name: TemplatableString,
+	pub channel: TemplatableString,
+	#[serde(default)]
+	pub mode: SoundActionMode
+}
+
+#[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Choice {
 	pub response: Option<Text>,
@@ -82,7 +105,7 @@ pub struct Choice {
 	pub variables: Option<VariableApplications>,
 	pub log: Option<TemplatableString>,
 	pub info: Option<Vec<TemplatableString>>,
-	pub sound: Option<TemplatableString>,
+	pub sound: Option<SoundAction>,
 	pub ending: Option<TextLines>
 }
 

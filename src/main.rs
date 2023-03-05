@@ -16,7 +16,7 @@ fn main() -> Result<()> {
     // Load content and data
     let config = Manifest::load()?;
 	let mut player = Player::load(&config)?;
-    let resources = Resources::load()?;
+    let resources = Resources::load(&config)?;
     // Validate loaded resources
     resources.validate()?;
     // Create input controller
