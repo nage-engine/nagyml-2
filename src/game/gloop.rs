@@ -61,7 +61,7 @@ pub fn take_input(input: &mut InputController, context: &InputContext, config: &
 			InputResult::Choice(i) => handle_choice(choices[i - 1], config, player, resources, model, text_context)?,
 			InputResult::Variable(result) => {
 				// Modify variables after the choose call since history entries are sensitive to this order
-				player.choose(choices[0], Some(&result), config, model, text_context)?;
+				player.choose(choices[0], Some(&result), config, model, resources, text_context)?;
 				player.variables.insert(result.0.clone(), result.1.clone());
 				player.try_push_log(choices[0], config, resources)?;
 				Continue

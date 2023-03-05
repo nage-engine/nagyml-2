@@ -243,7 +243,7 @@ impl Player {
 	}
 
 
-	pub fn choose(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, model: &PromptModel, text_context: &TextContext) -> Result<()> {
+	pub fn choose(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, model: &PromptModel, resources: &Resources, text_context: &TextContext) -> Result<()> {
 		let latest = self.latest_entry()?;
 		if let Some(result) = choice.to_history_entry(&latest, input, config, &self.variables, model, text_context) {
 			let entry = result?;
@@ -251,6 +251,11 @@ impl Player {
 			self.history.push_back(entry);
 			if self.history.len() > config.settings.history.size {
 				self.history.pop_front();
+			}
+		}
+		if let Some(audio) = &resources.audio {
+			if let Some(sound) = &choice.sound {
+				audio.play_sound(&sound.fill(text_context)?)?;
 			}
 		}
 		Ok(())
@@ -267,7 +272,7 @@ impl Player {
 	}
 
 	pub fn choose_full(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, resources: &Resources, model: &PromptModel, text_context: &TextContext) -> Result<()> {
-		self.choose(choice, input, config, model, text_context)?;
+		self.choose(choice, input, config, model, resources, text_context)?;
 		self.try_push_log(choice, config, resources)
 	}
 }

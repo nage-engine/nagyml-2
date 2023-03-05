@@ -82,6 +82,7 @@ pub struct Choice {
 	pub variables: Option<VariableApplications>,
 	pub log: Option<TemplatableString>,
 	pub info: Option<Vec<TemplatableString>>,
+	pub sound: Option<TemplatableString>,
 	pub ending: Option<TextLines>
 }
 
