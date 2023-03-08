@@ -7,7 +7,7 @@ use rlua::{Lua, Context, Table, Function, Chunk};
 
 use crate::loading::load_files;
 
-use super::{choice::{Notes, Variables}, audio::Audio, text::TextContext};
+use super::text::TextContext;
 
 #[derive(Debug)]
 /// A container for script files and script running context.
@@ -32,21 +32,23 @@ impl Scripts {
 		context.load(&format!("math.randomseed({fake_time})")).exec()
 	}
 
-	/// Adds global values to the specified [`Context`] based on the player data.
+	/// Adds global values to the specified [`Context`] based on the text context.
 	/// 
 	/// The following values are added:
 	/// - A `notes` sequence based on the player [`Notes`]
 	/// - A `variables` table based on the player [`Variables`]
+	/// - A `nage` globals table based on the global variables
+	/// - An `audio` table mapping channels to their data
 	/// 
-	/// These values do not represent the player data itself and are merely snapshots of the data.
+	/// Player data values do not represent the data itself and are merely snapshots of the data.
 	/// Scripts cannot modify data directly and must instead be used in other central systems.
-	fn add_globals(&self, context: &Context, notes: &Notes, variables: &Variables, audio_res: &Option<Audio>, text_context: &TextContext) -> Result<(), rlua::Error> {
-		let notes_seq = context.create_sequence_from(notes.clone())?;
-		let vars_table = context.create_table_from(variables.clone())?;
+	fn add_globals(&self, context: &Context, text_context: &TextContext) -> Result<(), rlua::Error> {
+		let notes_seq = context.create_sequence_from(text_context.notes.clone())?;
+		let vars_table = context.create_table_from(text_context.variables.clone())?;
 		context.globals().set("notes", notes_seq)?;
 		context.globals().set("variables", vars_table)?;
 		context.globals().set("nage", text_context.create_variable_table(context)?)?;
-		if let Some(audio) = audio_res {
+		if let Some(audio) = text_context.audio {
 			context.globals().set("audio", audio.create_audio_table(context)?)?;
 		}
 		Ok(())
@@ -74,13 +76,13 @@ impl Scripts {
 		}
 	}
 
-	/// Evaluates a script resource given a filename and some player data context properties.
-	pub fn get(&self, file: &str, notes: &Notes, variables: &Variables, audio: &Option<Audio>, text_context: &TextContext) -> Result<Option<String>> {
+	/// Evaluates a script resource given a filename and text context.
+	pub fn get(&self, file: &str, text_context: &TextContext) -> Result<Option<String>> {
 		let components = Self::file_components(file);
 		let result = self.files.get(components.0).map(|script| {
 			self.lua.context(|lua_ctx| {
 				self.random_seed(&lua_ctx)?;
-				self.add_globals(&lua_ctx, notes, variables, audio, text_context)?;
+				self.add_globals(&lua_ctx, text_context)?;
 				let loaded = lua_ctx.load(script);
 				Self::eval(loaded, components.1)
 					.with_context(|| anyhow!("failed to evaluate script component {file}"))

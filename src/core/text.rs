@@ -17,12 +17,12 @@ use super::{choice::{Variables, Notes}, manifest::Manifest, scripts::Scripts, re
 /// Immutable resource data must be referenced.
 pub struct TextContext<'a> {
 	config: &'a Manifest,
-	notes: Notes,
-	variables: Variables,
+	pub notes: Notes,
+	pub variables: Variables,
 	lang: String,
 	lang_file: Option<&'a TranslationFile>,
 	scripts: &'a Scripts,
-	audio: &'a Option<Audio>
+	pub audio: &'a Option<Audio>
 }
 
 impl<'a> TextContext<'a> {
@@ -133,7 +133,7 @@ impl TemplatableString {
 	pub fn fill(&self, context: &TextContext) -> Result<String> {
 		let content = self.lang_file_content(context.lang_file);
 		let scripted = Self::template(content, '(', ')', move |var| {
-			context.scripts.get(var, &context.notes, &context.variables, context.audio, context)
+			context.scripts.get(var, context)
 		})?;
 		Self::template(&scripted, '<', '>', move |var| {
 			let filled = Self::fill_variable(var, &context.variables, &context)
