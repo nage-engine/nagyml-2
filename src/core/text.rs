@@ -288,6 +288,7 @@ pub struct Text {
 	/// The mode in which the text content should be formatted upon retrieval.
 	pub mode: TemplatableValue<TextMode>,
 	pub speed: Option<TextSpeed>,
+	pub newline: Option<TemplatableValue<bool>>,
 	pub wait: Option<TemplatableValue<u64>>
 }
 
@@ -317,12 +318,21 @@ impl Text {
 		Ok(())
 	}
 
+	/// Whether a newline should be printed before this line.
+	/// Uses the `newline` key, otherwise defaulting to comparing the [`TextMode`] between this and the previous line, if any.
+	fn newline(&self, previous: Option<&Text>, context: &TextContext) -> Result<bool> {
+		self.newline.as_ref()
+			.map(|nl| nl.get_value(context))
+    		.unwrap_or(previous
+				.map(|line| Ok(self.mode.get_value(context)? != line.mode.get_value(context)?))
+				.unwrap_or(Ok(false))
+			)
+	}
+
 	/// Calculates some [`SeparatedTextLines`] based on some text lines.
 	fn get_separated_lines<'a>(lines: &'a TextLines, context: &TextContext) -> Result<SeparatedTextLines<'a>> {
 		lines.iter().enumerate()
-    		.map(|(index, line)| Ok((
-				index > 0 && lines[index - 1].mode.get_value(context)? != line.mode.get_value(context)?, line
-			)))
+    		.map(|(index, line)| Ok((line.newline(index.checked_sub(1).map(|i| &lines[i]), context)?, line)))
     		.collect()
 	}
 

@@ -1,6 +1,9 @@
 ask_for_name:
   prompt:
   - text: What should I call you?
+  - text: Something something
+    mode: action
+    newline: 10
   choices:
   - input:
       variable: name
