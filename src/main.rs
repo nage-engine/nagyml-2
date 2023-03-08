@@ -19,6 +19,7 @@ fn main() -> Result<()> {
     let resources = Resources::load(&config)?;
     // Validate loaded resources
     resources.validate()?;
+    dbg!(&resources.prompts);
     // Create input controller
     let mut input = InputController::new()?;
     // Begin game loop

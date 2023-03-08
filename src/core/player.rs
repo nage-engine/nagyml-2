@@ -59,7 +59,7 @@ impl NoteEntry {
 	}
 
 	pub fn from_application(app: &NoteApplication, text_context: &TextContext) -> Result<Self> {
-		Self::new(&app.name, app.take, text_context)
+		Self::new(&app.name, app.take.get_value(text_context)?, text_context)
 	}
 }
 

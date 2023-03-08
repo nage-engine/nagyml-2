@@ -2,20 +2,21 @@ use std::{collections::{HashMap, HashSet}};
 
 use crate::input::controller::VariableInputResult;
 
-use super::{text::{Text, TextLines, TemplatableString, TextContext}, path::Path, prompt::{Prompts, Prompt, PromptModel}, player::{HistoryEntry, VariableEntry, VariableEntries, NoteEntry, NoteEntries}, manifest::Manifest};
+use super::{text::{Text, TextLines, TemplatableString, TextContext, TemplatableValue}, path::Path, prompt::{Prompts, Prompt, PromptModel}, player::{HistoryEntry, VariableEntry, VariableEntries, NoteEntry, NoteEntries}, manifest::Manifest};
 
 use anyhow::{Result, anyhow, Context};
 use result::OptionResultExt;
 use serde::Deserialize;
+use strum::EnumString;
 
-pub fn default_true() -> bool { true }
+pub fn default_true() -> TemplatableValue<bool> { TemplatableValue::value(true) }
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct NoteApplication {
 	pub name: TemplatableString,
 	#[serde(default)]
-	pub take: bool,
+	pub take: TemplatableValue<bool>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -23,7 +24,7 @@ pub struct NoteApplication {
 pub struct NoteRequirement {
 	name: TemplatableString,
 	#[serde(default = "default_true")]
-	has: bool
+	has: TemplatableValue<bool>
 }
 
 #[derive(Deserialize, Debug)]
@@ -67,8 +68,9 @@ pub type Variables = HashMap<String, String>;
 
 pub type VariableApplications = HashMap<String, TemplatableString>;
 
-#[derive(Deserialize, Debug, Clone)]
+#[derive(Deserialize, Debug, Clone, EnumString)]
 #[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 pub enum SoundActionMode {
 	Queue,
 	Overwrite,
@@ -88,9 +90,10 @@ impl Default for SoundActionMode {
 pub struct SoundAction {
 	pub name: Option<TemplatableString>,
 	pub channel: TemplatableString,
-	pub mode: Option<SoundActionMode>,
-	pub seek: Option<u64>,
-	pub speed: Option<f64>
+	#[serde(default)]
+	pub mode: TemplatableValue<SoundActionMode>,
+	pub seek: Option<TemplatableValue<u64>>,
+	pub speed: Option<TemplatableValue<f64>>
 }
 
 #[derive(Deserialize, Debug)]
@@ -101,9 +104,9 @@ pub struct Choice {
 	pub input: Option<VariableInput>,
 	pub jump: Option<Path>,
 	#[serde(default = "default_true")]
-	pub display: bool,
+	pub display: TemplatableValue<bool>,
 	// This is an option for easier defaulting to the config state
-	pub lock: Option<bool>,
+	pub lock: Option<TemplatableValue<bool>>,
 	pub notes: Option<NoteActions>,
 	pub variables: Option<VariableApplications>,
 	pub log: Option<TemplatableString>,
@@ -166,8 +169,8 @@ impl Choice {
 		self.jump.as_ref().map(|jump| {
 			Ok(HistoryEntry {
 				path: jump.fill(&latest.path, text_context)?,
-				display: self.display,
-				locked: self.lock.unwrap_or(config.settings.history.locked),
+				display: self.display.get_value(text_context)?,
+				locked: self.lock.as_ref().map(|lock| lock.get_value(text_context)).invert()?.unwrap_or(config.settings.history.locked),
 				redirect: matches!(model, PromptModel::Redirect(_)),
 				notes: self.notes.as_ref().map(|n| n.to_note_entries(text_context)).invert()?,
 				variables: self.create_variable_entries(input, variables, text_context)?,
@@ -185,7 +188,7 @@ impl Choice {
 		if let Some(actions) = &self.notes {
 			if let Some(require) = &actions.require {
 				for requirement in require {
-					if requirement.has != notes.contains(&requirement.name.fill(text_context)?) {
+					if requirement.has.get_value(text_context)? != notes.contains(&requirement.name.fill(text_context)?) {
 						return Ok(false);
 					}
 				}

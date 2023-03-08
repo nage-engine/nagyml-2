@@ -70,17 +70,15 @@ impl Audio {
 	}
 
 	/// Applies actions requiring that a specified sound file is **not** present.
-	fn accept_general_actions(player: &AudioPlayer, seek: Option<Duration>, action: &SoundAction) {
+	fn accept_general_actions(player: &AudioPlayer, seek: Option<Duration>, mode: SoundActionMode) {
 		use SoundActionMode::*;
 		if let Some(duration) = seek {
 			player.seek(duration);
 		}
-		if let Some(mode) = &action.mode {
-			match mode {
-				Skip => player.skip(),
-				&Playing(is_playing) => player.set_playing(is_playing),
-				_ => ()
-			}
+		match mode {
+			Skip => player.skip(),
+			Playing(is_playing) => player.set_playing(is_playing),
+			_ => ()
 		}
 	}
 
@@ -107,22 +105,25 @@ impl Audio {
 		let channel = action.channel.fill(text_context)?;
 		let player = self.players.get(&channel)
     		.ok_or(anyhow!("Invalid sound channel '{channel}'"))?;
-		let seek = action.seek.map(|ms| Duration::from_millis(ms));
+
+		let seek = action.seek.as_ref().map(|ms| {
+			ms.get_value(text_context).map(|amt| Duration::from_millis(amt))
+		}).invert()?;
+		
+		let mode = action.mode.get_value(text_context)?;
 
 		match &action.name {
-			None => Self::accept_general_actions(player, seek, action),
+			None => Self::accept_general_actions(player, seek, mode),
 			Some(name) => {
 				let sound = name.fill(text_context)?;
 				let sfx = self.sounds.get(&sound)
 					.ok_or(anyhow!("Invalid sound file '{sound}'"))?;
-				let mode = action.mode.clone()
-					.unwrap_or(SoundActionMode::default());
 				Self::accept_mode(player, sfx, seek, mode);
 			}
 		}
 
-		if let Some(speed) = action.speed {
-			player.set_playback_speed(speed);
+		if let Some(speed) = &action.speed {
+			player.set_playback_speed(speed.get_value(text_context)?);
 		}
 
 		Ok(())
