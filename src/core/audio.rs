@@ -3,6 +3,7 @@ use std::{collections::HashMap, time::Duration};
 use anyhow::{Result, anyhow};
 use playback_rs::{Player as AudioPlayer, Song};
 use result::OptionResultExt;
+use rlua::{Context, Table};
 
 use crate::loading::get_content_iterator;
 
@@ -69,9 +70,26 @@ impl Audio {
 		.invert()
 	}
 
+	/// Retrieves an [`AudioPlayer`], if any, by a channel name.
 	pub fn get_player(&self, channel: &str) -> Result<&AudioPlayer> {
 		self.players.get(channel)
     		.ok_or(anyhow!("Invalid sound channel '{channel}'"))
+	}
+
+	pub fn create_audio_table<'a>(&self, context: &Context<'a>) -> Result<Table<'a>, rlua::Error> {
+		let table = context.create_table()?;
+		for (channel, player) in &self.players {
+			let channel_table = context.create_table()?;
+			channel_table.set("is_playing", player.is_playing())?;
+			channel_table.set("has_sound", player.has_current_song())?;
+			channel_table.set("has_sound_queued", player.has_next_song())?;
+			if let Some((pos, duration)) = player.get_playback_position() {
+				channel_table.set("position", pos.as_millis())?;
+				channel_table.set("song_duration", duration.as_millis())?;
+			}
+			table.set(channel.clone(), channel_table)?;
+		}
+		Ok(table)
 	}
 
 	/// Applies actions requiring that a specified sound file is **not** present.
@@ -105,7 +123,7 @@ impl Audio {
 		};
 	}
 
-	/// Applies a [`SoundAction`] to a particular channel
+	/// Applies a [`SoundAction`] to a particular channel.
 	pub fn accept(&self, action: &SoundAction, text_context: &TextContext) -> Result<()> {
 		let channel = action.channel.fill(text_context)?;
 		let player = self.get_player(&channel)?;

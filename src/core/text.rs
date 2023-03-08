@@ -1,14 +1,15 @@
 use std::{fmt::{Display, Debug}, time::Duration, str::FromStr};
 
-use anyhow::{Result, Context, anyhow};
+use anyhow::{Result, anyhow, Context as ContextTrait};
 use crossterm::style::Stylize;
+use rlua::{Table, Context};
 use serde::{Deserialize, Deserializer, de::{Error as DeError, DeserializeOwned}};
 use snailshell::{snailprint_s, snailprint_d};
 use strum::EnumString;
 
 use crate::loading::{Contents, ContentFile};
 
-use super::{choice::{Variables, Notes}, manifest::Manifest, scripts::Scripts, resources::Resources};
+use super::{choice::{Variables, Notes}, manifest::Manifest, scripts::Scripts, resources::Resources, audio::Audio};
 
 /// A wrapper for all data relevant for filling in [`TemplatableString`]s.
 /// 
@@ -20,7 +21,8 @@ pub struct TextContext<'a> {
 	variables: Variables,
 	lang: String,
 	lang_file: Option<&'a TranslationFile>,
-	scripts: &'a Scripts
+	scripts: &'a Scripts,
+	audio: &'a Option<Audio>
 }
 
 impl<'a> TextContext<'a> {
@@ -32,7 +34,8 @@ impl<'a> TextContext<'a> {
 			variables,
 			lang: lang.to_owned(),
 			lang_file: resources.lang_file(lang), 
-			scripts: &resources.scripts 
+			scripts: &resources.scripts,
+			audio: &resources.audio
 		}
 	}
 
@@ -47,6 +50,15 @@ impl<'a> TextContext<'a> {
 			}
 		})
 		.flatten()
+	}
+
+	pub fn create_variable_table<'b>(&self, context: &Context<'b>) -> Result<Table<'b>, rlua::Error> {
+		let table = context.create_table()?;
+		table.set("game_name", self.config.metadata.name.clone())?;
+		table.set("game_authors", context.create_sequence_from(self.config.metadata.authors.clone())?)?;
+		table.set("game_version", self.config.metadata.version.to_string())?;
+		table.set("lang", self.lang.to_owned())?;
+		Ok(table)
 	}
 }
 
@@ -121,7 +133,7 @@ impl TemplatableString {
 	pub fn fill(&self, context: &TextContext) -> Result<String> {
 		let content = self.lang_file_content(context.lang_file);
 		let scripted = Self::template(content, '(', ')', move |var| {
-			context.scripts.get(var, &context.notes, &context.variables)
+			context.scripts.get(var, &context.notes, &context.variables, context.audio, context)
 		})?;
 		Self::template(&scripted, '<', '>', move |var| {
 			let filled = Self::fill_variable(var, &context.variables, &context)
