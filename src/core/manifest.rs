@@ -4,7 +4,7 @@ use serde::Deserialize;
 
 use crate::loading::parse;
 
-use super::{choice::{Variables, Notes}, text::{TextSpeed, TextLines}, player::PathEntry, resources::UnlockedInfoPages};
+use super::{choice::{Variables, Notes}, text::{TextSpeed, TextLines, TemplatableValue}, player::PathEntry, resources::UnlockedInfoPages};
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -59,7 +59,7 @@ impl Default for Settings {
 		Self {
 			save: true,
 			debug: false,
-			speed: TextSpeed::Delay(5),
+			speed: TextSpeed::Delay(TemplatableValue::value(5)),
 			history: HistorySettings::default(),
 			lang: None,
 			channels: None

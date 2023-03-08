@@ -13,8 +13,8 @@ pub struct Path {
 
 impl Path {
 	pub fn is_not_templatable(&self) -> bool {
-		TemplatableString::is_templatable(&self.prompt.content)
-			&& self.file.as_ref().map(|t| TemplatableString::is_templatable(&t.content)).unwrap_or(false)
+		self.prompt.is_templatable()
+			&& self.file.as_ref().map(|t| t.is_templatable()).unwrap_or(false)
 	}
 
 	pub fn fill(&self, full: &PathEntry, text_context: &TextContext) -> Result<PathEntry> {

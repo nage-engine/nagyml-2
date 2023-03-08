@@ -31,3 +31,4 @@ requestty = "0.5.0"
 playback-rs = "0.4.1"
 colored = "2.0.0"
 crossterm = "0.26.1"
+strum = { version = "0.24.1", features = [ "derive" ] }
