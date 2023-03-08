@@ -8,7 +8,7 @@ use strum::EnumString;
 
 use crate::loading::{Contents, ContentFile};
 
-use super::{choice::{Variables, Notes}, manifest::{Manifest, Metadata}, scripts::Scripts, resources::Resources};
+use super::{choice::{Variables, Notes}, manifest::Manifest, scripts::Scripts, resources::Resources};
 
 /// A wrapper for all data relevant for filling in [`TemplatableString`]s.
 /// 
@@ -18,6 +18,7 @@ pub struct TextContext<'a> {
 	config: &'a Manifest,
 	notes: Notes,
 	variables: Variables,
+	lang: String,
 	lang_file: Option<&'a TranslationFile>,
 	scripts: &'a Scripts
 }
@@ -28,10 +29,24 @@ impl<'a> TextContext<'a> {
 		TextContext { 
 			config, 
 			notes,
-			variables, 
+			variables,
+			lang: lang.to_owned(),
 			lang_file: resources.lang_file(lang), 
 			scripts: &resources.scripts 
 		}
+	}
+
+	pub fn global_variable(&self, var: &str) -> Option<String> {
+		var.to_lowercase().strip_prefix("nage:").map(|name| {
+			match name {
+				"game_name" => Some(self.config.metadata.name.clone()),
+				"game_authors" => Some(self.config.metadata.authors.join(", ")),
+				"game_version" => Some(self.config.metadata.version.to_string()),
+				"lang" => Some(self.lang.to_owned()),
+				_ => None
+			}
+		})
+		.flatten()
 	}
 }
 
@@ -99,8 +114,8 @@ impl TemplatableString {
 			.unwrap_or(&self.content)
 	}
 
-	fn fill_variable<'a>(var: &str, variables: &'a Variables, metadata: &'a Metadata) -> Option<String> {
-		metadata.global_variable(var).or(variables.get(var).cloned())
+	fn fill_variable<'a>(var: &str, variables: &'a Variables, context: &TextContext) -> Option<String> {
+		context.global_variable(var).or(variables.get(var).cloned())
 	}
 
 	pub fn fill(&self, context: &TextContext) -> Result<String> {
@@ -109,7 +124,7 @@ impl TemplatableString {
 			context.scripts.get(var, &context.notes, &context.variables)
 		})?;
 		Self::template(&scripted, '<', '>', move |var| {
-			let filled = Self::fill_variable(var, &context.variables, &context.config.metadata)
+			let filled = Self::fill_variable(var, &context.variables, &context)
 				.map(|s| s.clone());
 			Ok(filled)
 		})

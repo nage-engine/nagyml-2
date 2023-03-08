@@ -10,21 +10,10 @@ use super::{choice::{Variables, Notes}, text::{TextSpeed, TextLines, Templatable
 #[serde(deny_unknown_fields)]
 /// A collection of settings that identify information about the game itself and its authors.
 pub struct Metadata {
-	name: String,
-	authors: Vec<String>,
-	version: Version,
+	pub name: String,
+	pub authors: Vec<String>,
+	pub version: Version,
 	pub contact: Option<Vec<String>>
-}
-
-impl Metadata {
-	pub fn global_variable(&self, var: &str) -> Option<String> {
-		match var {
-			"nage:game_name" => Some(self.name.clone()),
-			"nage:game_authors" => Some(self.authors.join(", ")),
-			"nage:game_version" => Some(self.version.to_string()),
-			_ => None
-		}
-	}
 }
 
 #[derive(Deserialize, Debug)]
