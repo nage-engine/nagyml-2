@@ -8,7 +8,7 @@ use crate::loading::get_content_iterator;
 
 use super::{manifest::Manifest, choice::{SoundAction, SoundActionMode}, text::TextContext};
 
-/// A map of channel names to audio player instances.
+/// A map of channel names to audio player instances and whether they are currently enabled.
 pub type AudioPlayers = HashMap<String, AudioPlayer>;
 /// A map of song names to decoded song content.
 pub type Sounds = HashMap<String, Song>;
@@ -31,7 +31,7 @@ impl Audio {
 	fn load_players(config: &Manifest) -> Option<Result<AudioPlayers>> {
 		config.settings.channels.as_ref().map(|channels| {
 			channels.iter()
-    			.map(|channel| {
+    			.map(|(channel, _)| {
 					AudioPlayer::new(None)
 						.map(|player| (channel.clone(), player))
     					.map_err(|err| anyhow!(err))
@@ -69,6 +69,11 @@ impl Audio {
 		.invert()
 	}
 
+	pub fn get_player(&self, channel: &str) -> Result<&AudioPlayer> {
+		self.players.get(channel)
+    		.ok_or(anyhow!("Invalid sound channel '{channel}'"))
+	}
+
 	/// Applies actions requiring that a specified sound file is **not** present.
 	fn accept_general_actions(player: &AudioPlayer, seek: Option<Duration>, mode: SoundActionMode) {
 		use SoundActionMode::*;
@@ -100,11 +105,10 @@ impl Audio {
 		};
 	}
 
-	/// Applies a [`SoundAction`] to a particular channel.
+	/// Applies a [`SoundAction`] to a particular channel
 	pub fn accept(&self, action: &SoundAction, text_context: &TextContext) -> Result<()> {
 		let channel = action.channel.fill(text_context)?;
-		let player = self.players.get(&channel)
-    		.ok_or(anyhow!("Invalid sound channel '{channel}'"))?;
+		let player = self.get_player(&channel)?;
 
 		let seek = action.seek.as_ref().map(|ms| {
 			ms.get_value(text_context).map(|amt| Duration::from_millis(amt))

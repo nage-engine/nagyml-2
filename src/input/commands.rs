@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow};
 use clap::Parser;
 
-use crate::{core::{player::Player, prompt::Prompt as PromptUtil, manifest::Manifest, text::{Translations, TextContext}, choice::Notes, resources::{UnlockedInfoPages, InfoPages, Resources}}, game::{gloop::GameLoopResult}};
+use crate::{core::{player::Player, prompt::Prompt as PromptUtil, manifest::Manifest, text::{Translations, TextContext}, choice::Notes, resources::{UnlockedInfoPages, InfoPages, Resources}, audio::Audio}, game::{gloop::GameLoopResult}};
 
 #[derive(Parser, Debug, PartialEq)]
 #[command(multicall = true)]
@@ -14,6 +14,8 @@ pub enum RuntimeCommand {
 	Info,
 	#[command(about = "Displays an action log page")]
 	Log,
+	#[command(about = "Manages sound effects and music channels")]
+	Sound,
 	#[command(about = "Saves the player data")]
 	Save,
 	#[command(about = "Saves and quits the game")]
@@ -45,7 +47,7 @@ impl RuntimeCommand {
 	fn is_normal(&self) -> bool {
 		use RuntimeCommand::*;
 		match self {
-			Back | Save | Quit | Lang | Info | Log => true,
+			Back | Lang | Info | Log | Sound | Save | Quit => true,
 			_ => false
 		}
 	}
@@ -121,6 +123,43 @@ impl RuntimeCommand {
 		Ok(CommandResult::Output(format!("\n{entries}")))
 	}
 
+	/// Handles a [`Sound`](RuntimeCommand::Sound) command.
+	fn sound(player: &mut Player, audio_res: &Option<Audio>) -> Result<CommandResult> {
+		let audio = audio_res.as_ref()
+			.ok_or(anyhow!("No sound channels loaded"))?;
+
+		println!();
+
+		// Multi-selection where selected represents the channel being enabled and vice versa
+		let channel_data: Vec<(String, bool)> = audio.players.keys()
+    		.map(|channel| (channel.clone(), player.channels.contains(channel)))
+    		.collect();
+		let channel_selection = requestty::Question::multi_select("select_channels")
+    		.message("Select sound channels")
+    		.choices_with_default(channel_data)
+    		.build();
+		let channel_choices = requestty::prompt_one(channel_selection)?;
+
+		// The selected channels
+		let enabled_channels: Vec<String> = channel_choices.as_list_items().unwrap().iter()
+    		.map(|choice| choice.text.clone())
+			.collect();
+
+		// Each possible channel will either be selected or not; if so, append to player's
+		// enabled channel list if not already present, otherwise remove and stop the channel playback if necessary
+		for channel in audio.players.keys() {
+			if enabled_channels.contains(channel) {
+				player.channels.insert(channel.clone());
+			}
+			else {
+				player.channels.remove(channel);
+				audio.get_player(channel)?.stop();
+			}
+		}
+
+		Ok(CommandResult::retry())
+	}
+
 	/// Handles a [`Prompt`](RuntimeCommand::Prompt) command.
 	fn prompt(notes: &Notes, resources: &Resources, text_context: &TextContext) -> Result<CommandResult> {
 		println!();
@@ -178,6 +217,7 @@ impl RuntimeCommand {
 			Lang => Self::lang(player, &resources.translations)?,
 			Info => Self::info(&player.info_pages, &resources.info_pages)?,
 			Log => Self::log(&player.log)?,
+			Sound => Self::sound(player, &resources.audio)?,
 			Save => {
 				player.save();
 				Output("Saving... ".to_owned())

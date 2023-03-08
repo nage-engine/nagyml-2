@@ -1,3 +1,5 @@
+use std::collections::{HashMap, HashSet};
+
 use anyhow::{Result, anyhow, Context};
 use semver::Version;
 use serde::Deserialize;
@@ -40,7 +42,7 @@ pub struct Settings {
 	pub speed: TextSpeed,
 	pub history: HistorySettings,
 	pub lang: Option<String>,
-	pub channels: Option<Vec<String>>
+	pub channels: Option<HashMap<String, bool>>
 }
 
 impl Default for Settings {
@@ -53,6 +55,18 @@ impl Default for Settings {
 			lang: None,
 			channels: None
 		}
+	}
+}
+
+impl Settings {
+	pub fn enabled_channels(&self) -> HashSet<String> {
+		self.channels.as_ref().map(|map| {
+			map.iter()
+    			.filter(|(_, &enabled)| enabled)
+				.map(|(key, _)| key.clone())
+				.collect()
+		})
+		.unwrap_or(HashSet::new())
 	}
 }
 

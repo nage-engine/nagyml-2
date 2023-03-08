@@ -110,6 +110,8 @@ pub struct Player {
 	pub began: bool,
 	/// The player's display language.
 	pub lang: String,
+	/// The player's enabled sound channels.
+	pub channels: HashSet<String>,
 	/// The player's current notes.
 	pub notes: Notes,
 	/// The player's current variables.
@@ -131,6 +133,7 @@ impl Player {
 		Self {
 			began: false,
 			lang: config.settings.lang.clone().unwrap_or(String::from("en_us")),
+			channels: config.settings.enabled_channels(),
 			notes: config.entry.notes.clone().unwrap_or(HashSet::new()),
 			variables: config.entry.variables.clone().unwrap_or(HashMap::new()),
 			info_pages: config.entry.info_pages.clone().unwrap_or(HashSet::new()),
@@ -241,7 +244,6 @@ impl Player {
 		}
 		Ok(())
 	}
-
 
 	pub fn choose(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, model: &PromptModel, resources: &Resources, text_context: &TextContext) -> Result<()> {
 		let latest = self.latest_entry()?;
