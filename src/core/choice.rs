@@ -67,12 +67,14 @@ pub type Variables = HashMap<String, String>;
 
 pub type VariableApplications = HashMap<String, TemplatableString>;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 #[serde(rename_all = "snake_case")]
 pub enum SoundActionMode {
 	Queue,
 	Overwrite,
-	Passive
+	Passive,
+	Skip,
+	Playing(bool)
 }
 
 impl Default for SoundActionMode {
@@ -84,10 +86,11 @@ impl Default for SoundActionMode {
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct SoundAction {
-	pub name: TemplatableString,
+	pub name: Option<TemplatableString>,
 	pub channel: TemplatableString,
-	#[serde(default)]
-	pub mode: SoundActionMode
+	pub mode: Option<SoundActionMode>,
+	pub seek: Option<u64>,
+	pub speed: Option<f64>
 }
 
 #[derive(Deserialize, Debug)]
@@ -105,7 +108,7 @@ pub struct Choice {
 	pub variables: Option<VariableApplications>,
 	pub log: Option<TemplatableString>,
 	pub info: Option<Vec<TemplatableString>>,
-	pub sound: Option<SoundAction>,
+	pub sounds: Option<Vec<SoundAction>>,
 	pub ending: Option<TextLines>
 }
 

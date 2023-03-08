@@ -254,8 +254,10 @@ impl Player {
 			}
 		}
 		if let Some(audio) = &resources.audio {
-			if let Some(sound) = &choice.sound {
-				audio.accept(sound, text_context)?;
+			if let Some(sounds) = &choice.sounds {
+				for sound in sounds {
+					audio.accept(sound, text_context)?;
+				}
 			}
 		}
 		Ok(())
