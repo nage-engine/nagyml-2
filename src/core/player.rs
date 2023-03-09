@@ -3,7 +3,7 @@ use std::{collections::{HashMap, HashSet, VecDeque}, vec};
 use anyhow::{Result, Context, anyhow};
 use serde::{Serialize, Deserialize};
 
-use crate::{loading::parse, input::controller::VariableInputResult};
+use crate::{loading::parse, game::input::VariableInputResult};
 
 use super::{choice::{NoteApplication, Notes, Variables, Choice, VariableApplications}, manifest::Manifest, text::{TextContext, TemplatableString}, resources::{UnlockedInfoPages, Resources}, prompt::PromptModel};
 

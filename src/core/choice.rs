@@ -1,6 +1,6 @@
 use std::{collections::{HashMap, HashSet}};
 
-use crate::input::controller::VariableInputResult;
+use crate::game::input::VariableInputResult;
 
 use super::{text::{Text, TextLines, TemplatableString, TextContext, TemplatableValue}, path::Path, prompt::{Prompts, Prompt, PromptModel}, player::{HistoryEntry, VariableEntry, VariableEntries, NoteEntry, NoteEntries}, manifest::Manifest};
 

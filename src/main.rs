@@ -4,12 +4,11 @@
 use crate::core::{manifest::Manifest, player::Player, resources::Resources};
 
 use anyhow::{Result, Context};
-use game::main::{begin, crash_context, shutdown};
-use input::controller::InputController;
+use game::{main::{begin, crash_context, shutdown}, input::InputController};
 
 mod core;
 mod game;
-mod input;
+mod cmd;
 mod loading;
 
 fn main() -> Result<()> {

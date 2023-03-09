@@ -1,8 +1,8 @@
 use anyhow::{Result, anyhow};
 
-use crate::{input::controller::InputController, core::{prompt::{Prompt, PromptModel}, text::{Text, TextContext}, manifest::Manifest, player::Player, resources::Resources}};
+use crate::{core::{prompt::{Prompt, PromptModel}, text::{Text, TextContext}, manifest::Manifest, player::Player, resources::Resources}};
 
-use super::gloop::{next_input_context, take_input, GameLoopResult};
+use super::{gloop::{next_input_context, take_input, GameLoopResult}, input::InputController};
 
 pub fn first_play_init(config: &Manifest, player: &mut Player, resources: &Resources) -> Result<()> {
 	if let Some(background) = &config.entry.background {

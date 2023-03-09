@@ -2,9 +2,7 @@ use anyhow::{Result, anyhow};
 use clap::Parser;
 use rustyline::DefaultEditor;
 
-use crate::core::{player::VariableEntry, choice::Variables};
-
-use super::commands::RuntimeCommand;
+use crate::{core::{player::VariableEntry, choice::Variables}, cmd::runtime::RuntimeCommand};
 
 #[derive(Debug)]
 pub struct InputController {
