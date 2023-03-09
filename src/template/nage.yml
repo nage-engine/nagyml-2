@@ -1,0 +1,22 @@
+metadata:
+  name: {name}
+  authors:
+  - {author}
+  version: {version}
+  contact:
+  - user @username at example.com
+
+settings:
+  save: false
+  debug: true
+  history:
+    size: 15
+  lang: en_us
+
+entry:
+  path:
+    file: main
+    prompt: main
+  background:
+  - text: <nage:game_name> v<nage:game_version> by <nage:game_authors>
+    mode: action

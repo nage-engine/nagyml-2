@@ -4,6 +4,8 @@
 use crate::core::{manifest::Manifest, player::Player, resources::Resources};
 
 use anyhow::{Result, Context};
+use clap::Parser;
+use cmd::cli::CliCommand;
 use game::{main::{begin, crash_context, shutdown}, input::InputController};
 
 mod core;
@@ -11,7 +13,7 @@ mod game;
 mod cmd;
 mod loading;
 
-fn main() -> Result<()> {
+fn run() -> Result<()> {
     // Load content and data
     let config = Manifest::load()?;
 	let mut player = Player::load(&config)?;
@@ -27,4 +29,14 @@ fn main() -> Result<()> {
     shutdown(&config, &player, silent);
 
     Ok(())
+}
+
+fn main() -> Result<()> {
+    // Parse CLI command - if 'run', use logic above
+    // ootherwise, uses its own method
+    let command = CliCommand::parse();
+    if let CliCommand::Run = command {
+        return run();
+    }
+    command.run()
 }

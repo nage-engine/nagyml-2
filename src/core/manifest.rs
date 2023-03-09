@@ -91,7 +91,7 @@ pub struct Manifest {
 }
 
 impl Manifest {
-	const FILE: &'static str = "nage.yml";
+	pub const FILE: &'static str = "nage.yml";
 
 	pub fn load() -> Result<Self> {
 		let content = std::fs::read_to_string(Self::FILE)
@@ -104,7 +104,7 @@ impl Manifest {
 	fn validate(&self) -> Result<()> {
 		let size = self.settings.history.size;
 		if size == 0 {
-			return Err(anyhow!("Failed to validate nage.yml: `settings.history.size` must be non-zero"));
+			return Err(anyhow!("Failed to validate manifest: `settings.history.size` must be non-zero"));
 		}
 		Ok(())
 	}

@@ -1,0 +1,8 @@
+main:
+  prompt: 
+  - text: Replace me!
+  choices:
+  - response: 
+      text: Replace me too!
+    jump:
+      prompt: main

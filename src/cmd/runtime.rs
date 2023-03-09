@@ -6,25 +6,25 @@ use crate::{core::{player::Player, prompt::Prompt as PromptUtil, manifest::Manif
 #[derive(Parser, Debug, PartialEq)]
 #[command(multicall = true)]
 pub enum RuntimeCommand {
-	#[command(about = "Tries going back a choice")]
+	#[command(about = "Try going back a choice")]
 	Back,
-	#[command(about = "Manages the display language")]
+	#[command(about = "Manage the display language")]
 	Lang,
-	#[command(about = "Displays an info page")]
+	#[command(about = "Display an info page")]
 	Info,
-	#[command(about = "Displays an action log page")]
+	#[command(about = "Display an action log page")]
 	Log,
-	#[command(about = "Manages sound effects and music channels")]
+	#[command(about = "Manage sound effects and music channels")]
 	Sound,
-	#[command(about = "Saves the player data")]
+	#[command(about = "Save the player data")]
 	Save,
-	#[command(about = "Saves and quits the game")]
+	#[command(about = "Save and quits the game")]
 	Quit,
-	#[command(about = "Displays debug info about a prompt", hide = true)]
+	#[command(about = "Display debug info about a prompt", hide = true)]
 	Prompt,
-	#[command(about = "Lists the currently applied notes", hide = true)]
+	#[command(about = "List the currently applied notes", hide = true)]
 	Notes,
-	#[command(about = "Lists the currently applied variable names and their values", hide = true)]
+	#[command(about = "List the currently applied variable names and their values", hide = true)]
 	Variables,
 }
 
