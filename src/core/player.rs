@@ -1,9 +1,9 @@
 use std::{collections::{HashMap, HashSet, VecDeque}, vec};
 
-use anyhow::{Result, Context, anyhow};
+use anyhow::{Result, anyhow};
 use serde::{Serialize, Deserialize};
 
-use crate::{loading::parse, game::input::VariableInputResult};
+use crate::{game::input::VariableInputResult, loading::Loader};
 
 use super::{choice::{NoteApplication, Notes, Variables, Choice, VariableApplications}, manifest::Manifest, text::{TextContext, TemplatableString}, resources::{UnlockedInfoPages, Resources}, prompt::PromptModel};
 
@@ -144,11 +144,8 @@ impl Player {
 
 	/// Attempts to load player data from the local `data.yml` file. 
 	/// If this file does not exist, defaults to constructing the player data with [`Player::new`].
-	pub fn load(config: &Manifest) -> Result<Self> {
-		match std::fs::read_to_string(Self::FILE) {
-			Ok(content) => parse(Self::FILE, &content).with_context(|| "Failed to parse player data"),
-			Err(_) => Ok(Self::new(config))
-		}
+	pub fn load(loader: &Loader, config: &Manifest) -> Self {
+		loader.load_file(Self::FILE).unwrap_or(Self::new(config))
 	}
 
 	/// Saves the player data to `data.yml`. Ignores any errors that may arise.

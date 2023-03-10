@@ -1,18 +1,18 @@
-use std::{collections::HashMap, time::Duration};
+use std::{collections::{HashMap, BTreeMap}, time::Duration};
 
 use anyhow::{Result, anyhow};
 use playback_rs::{Player as AudioPlayer, Song};
 use result::OptionResultExt;
 use rlua::{Context, Table};
 
-use crate::loading::get_content_iterator;
+use crate::loading::Loader;
 
 use super::{manifest::Manifest, choice::{SoundAction, SoundActionMode}, text::TextContext};
 
 /// A map of channel names to audio player instances and whether they are currently enabled.
 pub type AudioPlayers = HashMap<String, AudioPlayer>;
 /// A map of song names to decoded song content.
-pub type Sounds = HashMap<String, Song>;
+pub type Sounds = BTreeMap<String, Song>;
 
 /// A container for [`AudioPlayers`] and [`Sounds`].
 /// 
@@ -42,14 +42,11 @@ impl Audio {
 	}
 
 	/// Loads and parses [`Sounds`] from the `sounds` directory.
-	fn load_sounds() -> Result<Sounds> {
-		get_content_iterator("sounds")
-    		.map(|(key, path)| {
-				Song::from_file(path, None)
-					.map(|song| (key, song))
-					.map_err(|err| anyhow!(err))
-			})
-    		.collect()
+	fn load_sounds(loader: &Loader) -> Result<Sounds> {
+		loader.map_content("sounds", |path| {
+			Song::from_file(path, None)
+				.map_err(|err| anyhow!(err))
+		})
 	}
 
 	/// Loads an [`Audio`] container.
@@ -58,10 +55,10 @@ impl Audio {
 	/// and brings the down the whole audio system with it, signaling [None] within the wrapped option.
 	/// 
 	/// An [`Err`] is only returned if [`load_sounds`](Self::load_sounds) errors.
-	pub fn load(config: &Manifest) -> Result<Option<Self>> {
+	pub fn load(loader: &Loader, config: &Manifest) -> Result<Option<Self>> {
 		Self::load_players(config).map(|result| {
 			result.ok().map(|players| {
-				Self::load_sounds().map(|sounds| {
+				Self::load_sounds(loader).map(|sounds| {
 					Self { players, sounds }
 				})
 			})

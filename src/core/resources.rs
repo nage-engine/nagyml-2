@@ -1,12 +1,12 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashSet, BTreeMap};
 
 use anyhow::Result;
 
-use crate::loading::{load_content, load_files};
+use crate::loading::Loader;
 
 use super::{scripts::Scripts, text::{Translations, TranslationFile}, prompt::{Prompts, Prompt}, audio::Audio, manifest::Manifest};
 
-pub type InfoPages = HashMap<String, String>;
+pub type InfoPages = BTreeMap<String, String>;
 pub type UnlockedInfoPages = HashSet<String>;
 
 pub struct Resources {
@@ -18,13 +18,13 @@ pub struct Resources {
 }
 
 impl Resources {
-	pub fn load(config: &Manifest) -> Result<Self> {
+	pub fn load(loader: &Loader, config: &Manifest) -> Result<Self> {
 		let result = Resources {
-			prompts: load_content("prompts")?,
-			translations: load_content("lang")?,
-			info_pages: load_files("info")?,
-			scripts: Scripts::load()?,
-			audio: Audio::load(config)?
+			prompts: loader.load_content("prompts")?,
+			translations: loader.load_content("lang")?,
+			info_pages: loader.load_raw_content("info")?,
+			scripts: Scripts::load(loader)?,
+			audio: Audio::load(loader, config)?
 		};
 		Ok(result)
 	}

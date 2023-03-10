@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, path::PathBuf};
 
 use anyhow::Result;
 use clap::Parser;
@@ -15,7 +15,10 @@ pub const TEMPLATE_MAIN: &'static str = include_str!("../template/main.yml");
 #[command(author, version, about, long_about = None)]
 pub enum CliCommand {
 	#[command(about = "Run a Nagame", alias = "r")]
-	Run,
+	Run {
+		#[arg(help = "The game directory. Defaults to the current directory")]
+		path: PathBuf
+	},
 	#[command(about = "Create a new Nagame template")]
 	New {
 		#[arg(short, long, help = "Create all extra content directories")]

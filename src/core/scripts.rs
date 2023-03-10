@@ -1,26 +1,24 @@
-use std::collections::HashMap;
-
 use anyhow::{Result, Context as ContextTrait, anyhow};
 use rand::{Rng, thread_rng};
 use result::OptionResultExt;
 use rlua::{Lua, Context, Table, Function, Chunk};
 
-use crate::loading::load_files;
+use crate::loading::{Loader, RawContents};
 
 use super::text::TextContext;
 
 #[derive(Debug)]
 /// A container for script files and script running context.
 pub struct Scripts {
-	pub files: HashMap<String, String>,
+	pub files: RawContents,
 	pub lua: Lua
 } 
 
 impl Scripts {
 	/// Loads all scripts from the `scripts` directory and creates a new [`Lua`] object.
-	pub fn load() -> Result<Self> {
+	pub fn load(loader: &Loader) -> Result<Self> {
 		let result = Scripts {
-			files: load_files("scripts")?,
+			files: loader.load_raw_content("scripts")?,
 			lua: Lua::new()
 		};
 		Ok(result)

@@ -1,10 +1,10 @@
 use std::collections::{HashMap, HashSet};
 
-use anyhow::{Result, anyhow, Context};
+use anyhow::{Result, anyhow};
 use semver::Version;
 use serde::Deserialize;
 
-use crate::loading::parse;
+use crate::loading::Loader;
 
 use super::{choice::{Variables, Notes}, text::{TextSpeed, TextLines, TemplatableValue}, player::PathEntry, resources::UnlockedInfoPages};
 
@@ -93,10 +93,8 @@ pub struct Manifest {
 impl Manifest {
 	pub const FILE: &'static str = "nage.yml";
 
-	pub fn load() -> Result<Self> {
-		let content = std::fs::read_to_string(Self::FILE)
-			.with_context(|| format!("'{}' doesn't exist!", Self::FILE))?;
-		let config: Self = parse(Self::FILE, &content)?;
+	pub fn load(loader: &Loader) -> Result<Self> {
+		let config: Self = loader.load_file(Self::FILE)?;
 		config.validate()?;
 		Ok(config)
 	}
