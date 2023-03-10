@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow};
 use clap::Parser;
 
-use crate::{core::{player::Player, prompt::Prompt as PromptUtil, manifest::Manifest, text::{Translations, TextContext}, choice::Notes, resources::{UnlockedInfoPages, InfoPages, Resources}, audio::Audio}, game::{gloop::GameLoopResult}};
+use crate::{core::{player::Player, prompt::Prompt as PromptUtil, manifest::Manifest, text::{Translations, TextContext}, choice::Notes, resources::{UnlockedInfoPages, InfoPages, Resources}, audio::Audio}, game::{gloop::GameLoopResult}, loading::saves::SaveManager};
 
 #[derive(Parser, Debug, PartialEq)]
 #[command(multicall = true)]
@@ -200,7 +200,7 @@ impl RuntimeCommand {
 	/// Executes a runtime command if the player has permission to do so.
 	///
 	/// Any errors will be reported to the input loop with a retry following.
-	pub fn run(&self, config: &Manifest, player: &mut Player, resources: &Resources, text_context: &TextContext) -> Result<CommandResult> {
+	pub fn run(&self, config: &Manifest, player: &mut Player, saves: &SaveManager, resources: &Resources, text_context: &TextContext) -> Result<CommandResult> {
 		if !self.is_normal() && !config.settings.debug {
 			return Err(anyhow!("Unable to access debug commands"));
 		}
@@ -213,7 +213,7 @@ impl RuntimeCommand {
 			Log => Self::log(&player.log)?,
 			Sound => Self::sound(player, &resources.audio)?,
 			Save => {
-				player.save();
+				saves.write(player, None, false)?;
 				Output("Saving... ".to_owned())
 			}
 			Quit => Submit(GameLoopResult::Shutdown(false)),

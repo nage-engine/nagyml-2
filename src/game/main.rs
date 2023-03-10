@@ -1,6 +1,6 @@
 use anyhow::{Result, anyhow};
 
-use crate::{core::{prompt::{Prompt, PromptModel}, text::{Text, TextContext}, manifest::Manifest, player::Player, resources::Resources}};
+use crate::{core::{prompt::{Prompt, PromptModel}, text::{Text, TextContext}, manifest::Manifest, player::Player, resources::Resources}, loading::saves::SaveManager};
 
 use super::{gloop::{next_input_context, take_input, GameLoopResult}, input::InputController};
 
@@ -12,7 +12,7 @@ pub fn first_play_init(config: &Manifest, player: &mut Player, resources: &Resou
 	Ok(())
 }
 
-pub fn begin(config: &Manifest, player: &mut Player, resources: &Resources, input: &mut InputController) -> Result<bool> {
+pub fn begin(config: &Manifest, player: &mut Player, saves: &SaveManager, resources: &Resources, input: &mut InputController) -> Result<bool> {
 	if !player.began {
 		first_play_init(config, player, resources)?;
 	}
@@ -40,7 +40,7 @@ pub fn begin(config: &Manifest, player: &mut Player, resources: &Resources, inpu
 				let context = next_input_context(&model, &choices, &text_context)?
 					.ok_or(anyhow!("Could not resolve input context"))?;
 				// Borrow-checker coercion; only using necessary fields in static method
-				match take_input(input, &context, config, player, resources, &model, &text_context, &choices)? {
+				match take_input(input, &context, config, player, saves, resources, &model, &text_context, &choices)? {
 					GameLoopResult::Retry(flush) => if flush { println!() },
 					GameLoopResult::Continue => { println!(); break },
 					GameLoopResult::Shutdown(silent) => break 'outer silent
@@ -49,15 +49,6 @@ pub fn begin(config: &Manifest, player: &mut Player, resources: &Resources, inpu
 		}
 	};
 	Ok(silent)
-}
-
-pub fn shutdown(config: &Manifest, player: &Player, silent: bool) {
-	if config.settings.save {
-		player.save();
-	}
-	if !silent {
-		println!("Exiting...");
-	}
 }
 
 pub fn crash_context(config: &Manifest) -> String {

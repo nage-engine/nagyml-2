@@ -1,7 +1,7 @@
 use anyhow::Result;
 use result::OptionResultExt;
 
-use crate::{core::{player::Player, manifest::Manifest, text::{Text, TextContext}, choice::Choice, prompt::PromptModel, resources::Resources}, cmd::runtime::{RuntimeCommand, CommandResult}, game::input::{InputContext, InputResult}};
+use crate::{core::{player::Player, manifest::Manifest, text::{Text, TextContext}, choice::Choice, prompt::PromptModel, resources::Resources}, cmd::runtime::{RuntimeCommand, CommandResult}, game::input::{InputContext, InputResult}, loading::saves::SaveManager};
 
 use super::input::InputController;
 
@@ -33,11 +33,11 @@ pub fn handle_choice(choice: &Choice, config: &Manifest, player: &mut Player, re
 	Ok(Continue)
 }
 
-pub fn handle_command(parse: Result<RuntimeCommand>, config: &Manifest, player: &mut Player, resources: &Resources, text_context: &TextContext) -> Result<GameLoopResult> {
+pub fn handle_command(parse: Result<RuntimeCommand>, config: &Manifest, player: &mut Player, saves: &SaveManager, resources: &Resources, text_context: &TextContext) -> Result<GameLoopResult> {
 	match &parse {
 		Err(err) => println!("\n{err}"), // Clap error
 		Ok(command) => {
-			match command.run(config, player, resources, text_context) {
+			match command.run(config, player, saves, resources, text_context) {
 				Err(err) => println!("Error: {err}"), // Command runtime error
 				Ok(result) => {
 					match result {
@@ -51,7 +51,7 @@ pub fn handle_command(parse: Result<RuntimeCommand>, config: &Manifest, player: 
 	Ok(GameLoopResult::Retry(parse.is_ok()))
 }
 
-pub fn take_input(input: &mut InputController, context: &InputContext, config: &Manifest, player: &mut Player, resources: &Resources, model: &PromptModel, text_context: &TextContext, choices: &Vec<&Choice>) -> Result<GameLoopResult> {
+pub fn take_input(input: &mut InputController, context: &InputContext, config: &Manifest, player: &mut Player, saves: &SaveManager, resources: &Resources, model: &PromptModel, text_context: &TextContext, choices: &Vec<&Choice>) -> Result<GameLoopResult> {
 	use GameLoopResult::*;
 	let result = match input.take(context) {
 		Err(err) => {
@@ -68,7 +68,7 @@ pub fn take_input(input: &mut InputController, context: &InputContext, config: &
 				player.try_push_log(choices[0], config, resources)?;
 				Continue
 			},
-			InputResult::Command(parse) => handle_command(parse, config, player, resources, text_context)?
+			InputResult::Command(parse) => handle_command(parse, config, player, saves, resources, text_context)?
 		}
 	};
 	Ok(result)

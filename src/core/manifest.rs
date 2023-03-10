@@ -13,9 +13,16 @@ use super::{choice::{Variables, Notes}, text::{TextSpeed, TextLines, Templatable
 /// A collection of settings that identify information about the game itself and its authors.
 pub struct Metadata {
 	pub name: String,
+	id: Option<String>,
 	pub authors: Vec<String>,
 	pub version: Version,
 	pub contact: Option<Vec<String>>
+}
+
+impl Metadata {
+	pub fn game_id(&self) -> &str {
+		self.id.as_ref().unwrap_or(&self.name)
+	}
 }
 
 #[derive(Deserialize, Debug)]

@@ -17,7 +17,11 @@ pub enum CliCommand {
 	#[command(about = "Run a Nagame", alias = "r")]
 	Run {
 		#[arg(help = "The game directory. Defaults to the current directory")]
-		path: Option<PathBuf>
+		path: Option<PathBuf>,
+		#[arg(short, long, help = "Start a new save file")]
+		new: bool,
+		#[arg(short, long, help = "Pick from a list of multiple saves instead of the last used")]
+		pick: bool
 	},
 	#[command(about = "Create a new Nagame template")]
 	New {

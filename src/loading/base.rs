@@ -1,6 +1,6 @@
 use std::{path::{PathBuf, Path}, collections::BTreeMap};
 
-use anyhow::{Result, Context};
+use anyhow::{Result, Context, anyhow};
 use directories::ProjectDirs;
 use format_serde_error::SerdeError;
 use serde::de::DeserializeOwned;
@@ -25,9 +25,10 @@ impl Loader {
 		Loader { dir }
 	}
 
-	pub fn config_dir() -> Option<PathBuf> {
+	pub fn config_dir() -> Result<PathBuf> {
 		ProjectDirs::from("com", "acikek", "nage")
 			.map(|dirs| dirs.config_dir().to_path_buf())
+			.ok_or(anyhow!("Failed to resolve config directory"))
 	}
 
 	/// Gets the path relative to the inside of the base directory.
@@ -43,7 +44,7 @@ impl Loader {
 	}
 
 	/// Reads a file given a path and deserializes it into the specified type.
-	fn load<P, T>(path: P) -> Result<T> where P: AsRef<Path>, T: DeserializeOwned {
+	pub fn load<P, T>(path: P) -> Result<T> where P: AsRef<Path>, T: DeserializeOwned {
 		let content = std::fs::read_to_string(&path)
     		.with_context(|| format!("{} doesn't exist", path.as_ref().display()))?;
 		Self::parse(content)

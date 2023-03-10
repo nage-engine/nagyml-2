@@ -1,9 +1,9 @@
-use std::{collections::{HashMap, HashSet, VecDeque}, vec, path::Path};
+use std::{collections::{HashMap, HashSet, VecDeque}, vec};
 
 use anyhow::{Result, anyhow};
 use serde::{Serialize, Deserialize};
 
-use crate::{game::input::VariableInputResult, loading::base::Loader};
+use crate::game::input::VariableInputResult;
 
 use super::{choice::{NoteApplication, Notes, Variables, Choice, VariableApplications}, manifest::Manifest, text::{TextContext, TemplatableString}, resources::{UnlockedInfoPages, Resources}, prompt::PromptModel};
 
@@ -125,10 +125,8 @@ pub struct Player {
 }
 
 impl Player {
-	const FILE: &'static str = "data.yml";
-
 	/// Constructs a player based on a [`Manifest`].
-	fn new(config: &Manifest) -> Self {
+	pub fn new(config: &Manifest) -> Self {
 		let entry = HistoryEntry::new(&config.entry.path);
 		Self {
 			began: false,
@@ -139,19 +137,6 @@ impl Player {
 			info_pages: config.entry.info_pages.clone().unwrap_or(HashSet::new()),
 			log: config.entry.log.clone().unwrap_or(Vec::new()),
 			history: VecDeque::from(vec![entry])
-		}
-	}
-
-	/// Attempts to load player data from the local `data.yml` file. 
-	/// If this file does not exist, defaults to constructing the player data with [`Player::new`].
-	pub fn load(loader: &Loader, config: &Manifest) -> Self {
-		loader.load_file(Self::FILE).unwrap_or(Self::new(config))
-	}
-
-	/// Saves the player data to `data.yml`. Ignores any errors that may arise.
-	pub fn save(&self) {
-		if let Ok(content) = serde_yaml::to_string(self) {
-			let _ = std::fs::write(Self::FILE, content);
 		}
 	}
 
