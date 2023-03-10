@@ -4,7 +4,7 @@ use anyhow::{Result, anyhow};
 use semver::Version;
 use serde::Deserialize;
 
-use crate::loading::Loader;
+use crate::loading::base::Loader;
 
 use super::{choice::{Variables, Notes}, text::{TextSpeed, TextLines, TemplatableValue}, player::PathEntry, resources::UnlockedInfoPages};
 

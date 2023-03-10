@@ -3,7 +3,7 @@ use rand::{Rng, thread_rng};
 use result::OptionResultExt;
 use rlua::{Lua, Context, Table, Function, Chunk};
 
-use crate::loading::{Loader, RawContents};
+use crate::loading::base::{Loader, RawContents};
 
 use super::text::TextContext;
 

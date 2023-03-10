@@ -9,7 +9,7 @@ use anyhow::{Result, Context};
 use clap::Parser;
 use cmd::cli::CliCommand;
 use game::{main::{begin, crash_context, shutdown}, input::InputController};
-use loading::Loader;
+use loading::base::Loader;
 
 mod core;
 mod game;

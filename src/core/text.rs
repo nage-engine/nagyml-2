@@ -7,7 +7,7 @@ use serde::{Deserialize, Deserializer, de::{Error as DeError, DeserializeOwned}}
 use snailshell::{snailprint_s, snailprint_d};
 use strum::EnumString;
 
-use crate::loading::{Contents, ContentFile};
+use crate::loading::base::{ContentFile, Contents};
 
 use super::{choice::{Variables, Notes}, manifest::Manifest, scripts::Scripts, resources::Resources, audio::Audio};
 

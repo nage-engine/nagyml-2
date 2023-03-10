@@ -1,9 +1,9 @@
-use std::{collections::{HashMap, HashSet, VecDeque}, vec};
+use std::{collections::{HashMap, HashSet, VecDeque}, vec, path::Path};
 
 use anyhow::{Result, anyhow};
 use serde::{Serialize, Deserialize};
 
-use crate::{game::input::VariableInputResult, loading::Loader};
+use crate::{game::input::VariableInputResult, loading::base::Loader};
 
 use super::{choice::{NoteApplication, Notes, Variables, Choice, VariableApplications}, manifest::Manifest, text::{TextContext, TemplatableString}, resources::{UnlockedInfoPages, Resources}, prompt::PromptModel};
 
@@ -104,7 +104,7 @@ impl HistoryEntry {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-/// The player data tracker.
+/// A player data tracker.
 pub struct Player {
 	/// Whether the player has started playing the game.
 	pub began: bool,

@@ -69,8 +69,7 @@ impl RuntimeCommand {
 
 		println!();
 
-		let lang_question = requestty::Question::select("choose_lang")
-    		.message("Select a language")
+		let lang_question = requestty::Question::select("Select a language")
 			.choices(translations.keys())
 			.build();
 		let lang_choice = requestty::prompt_one(lang_question)?;
@@ -87,8 +86,7 @@ impl RuntimeCommand {
 
 		println!();
 		
-		let info_question = requestty::Question::select("choose_info")
-			.message("Select an info page")
+		let info_question = requestty::Question::select("Select an info page")
 			.choices(unlocked_pages)
 			.build();
 		let info_choice = requestty::prompt_one(info_question)?;
@@ -112,8 +110,7 @@ impl RuntimeCommand {
 			.map(|chunk| chunk[0][..25].to_owned())
 			.map(|line| format!("{line}..."))
 			.collect();
-		let page_question = requestty::Question::raw_select("choose_page")
-    		.message("Log page")
+		let page_question = requestty::Question::raw_select("Log page")
 			.choices(page_choices)
 			.build();
 		let page_choice = requestty::prompt_one(page_question)?;
@@ -134,8 +131,7 @@ impl RuntimeCommand {
 		let channel_data: Vec<(String, bool)> = audio.players.keys()
     		.map(|channel| (channel.clone(), player.channels.contains(channel)))
     		.collect();
-		let channel_selection = requestty::Question::multi_select("select_channels")
-    		.message("Select sound channels")
+		let channel_selection = requestty::Question::multi_select("Select sound channels")
     		.choices_with_default(channel_data)
     		.build();
 		let channel_choices = requestty::prompt_one(channel_selection)?;
@@ -164,15 +160,13 @@ impl RuntimeCommand {
 	fn prompt(notes: &Notes, resources: &Resources, text_context: &TextContext) -> Result<CommandResult> {
 		println!();
 
-		let file_question = requestty::Question::select("choose_file")
-			.message("Prompt file")
+		let file_question = requestty::Question::select("Prompt file")
 			.choices(resources.prompts.keys())
 			.build();
 		let file_choice = requestty::prompt_one(file_question)?;
 		let file = &file_choice.as_list_item().unwrap().text;
 
-		let prompt_question = requestty::Question::select("choose_prompt")
-			.message(format!("Prompt in '{}'", file))
+		let prompt_question = requestty::Question::select(format!("Prompt in '{}'", file))
 			.choices(PromptUtil::get_file(&resources.prompts, file)?.keys())
 			.build();
 		let prompt_choice = requestty::prompt_one(prompt_question)?;

@@ -27,17 +27,11 @@ pub enum CliCommand {
 }
 
 impl CliCommand {
-
 	fn new_properties() -> Result<HashMap<String, String>> {
 		let module = requestty::PromptModule::new(vec![
-			Question::input("name")
-				.message("Game name")
-				.build(),
-			Question::input("author")
-				.message("Author")
-				.build(),
-			Question::input("version")
-				.message("Version")
+			Question::input("Game name").build(),
+			Question::input("Author").build(),
+			Question::input("Version")
 				.validate(|ver, _| {
 					Version::parse(ver)
 						.map(|_| ())
