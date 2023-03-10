@@ -41,7 +41,7 @@ fn main() -> Result<()> {
     // ootherwise, uses its own method
     let command = CliCommand::parse();
     if let CliCommand::Run { path } = command {
-        return run(path);
+        return run(path.unwrap_or(PathBuf::new()));
     }
     command.run()
 }
