@@ -6,7 +6,7 @@ use requestty::Question;
 use semver::Version;
 use tinytemplate::TinyTemplate;
 
-use crate::core::manifest::Manifest;
+use crate::{core::manifest::Manifest, loading::{base::Loader, saves::SaveManager}};
 
 pub const TEMPLATE_MANIFEST: &'static str = include_str!("../template/nage.yml");
 pub const TEMPLATE_MAIN: &'static str = include_str!("../template/main.yml");
@@ -27,7 +27,9 @@ pub enum CliCommand {
 	New {
 		#[arg(short, long, help = "Create all extra content directories")]
 		full: bool
-	}
+	},
+	#[command(about = "Open the save directory")]
+	Saves
 }
 
 impl CliCommand {
@@ -71,10 +73,19 @@ impl CliCommand {
 		Ok(())
 	}
 
+	/// Handles a [`Saves`](CliCommand::Saves) command.
+	fn saves() -> Result<()> {
+		let loader = Loader::new(PathBuf::new());
+		let config = Manifest::load(&loader)?;
+		let _ = open::that(SaveManager::dir(&config, false)?)?;
+		Ok(())
+	}
+
 	pub fn run(&self) -> Result<()> {
 		use CliCommand::*;
 		match self {
 			&New { full } => Self::new(full),
+			Saves => Self::saves(),
 			_ => unreachable!()
 		}
 	}

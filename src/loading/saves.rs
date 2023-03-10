@@ -11,13 +11,25 @@ pub struct SaveManager {
 }
 
 impl SaveManager {
-	pub fn new(config_dir: PathBuf, config: &Manifest) -> Result<Self> {
-		let saves = Self { 
-			dir: config_dir.join(config.metadata.game_id()).join("saves") 
-		};
-		if !saves.dir.exists() {
-			std::fs::create_dir_all(&saves.dir)?;
+	pub fn dir(config: &Manifest, create: bool) -> Result<PathBuf> {
+		let dir = Loader::config_dir()?
+			.join(config.metadata.game_id())
+			.join("saves");
+		if !dir.exists() {
+			if create {
+				std::fs::create_dir_all(&dir)?;
+			}
+			else {
+				return Err(anyhow!("Saves directory does not exist"))
+			}
 		}
+		Ok(dir)
+	}
+
+	pub fn new(config: &Manifest) -> Result<Self> {
+		let saves = Self { 
+			dir: SaveManager::dir(config, true)?
+		};
 		Ok(saves)
 	}
 

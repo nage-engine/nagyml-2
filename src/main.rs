@@ -23,7 +23,7 @@ fn run(path: PathBuf, pick: bool, new: bool) -> Result<()> {
     let config = Manifest::load(&loader)?;
     let resources = Resources::load(&loader, &config)?;
     // Load player
-    let saves = SaveManager::new(Loader::config_dir()?, &config)?;
+    let saves = SaveManager::new(&config)?;
     let (mut player, save_file) = saves.load(&config, pick, new)?;
     // Validate loaded resources
     resources.validate()?;
@@ -44,7 +44,7 @@ fn run(path: PathBuf, pick: bool, new: bool) -> Result<()> {
 
 fn main() -> Result<()> {
     // Parse CLI command - if 'run', use logic above
-    // ootherwise, uses its own method
+    // otherwise, uses its own method
     let command = CliCommand::parse();
     if let CliCommand::Run { path, pick, new } = command {
         return run(path.unwrap_or(PathBuf::new()), pick, new);
