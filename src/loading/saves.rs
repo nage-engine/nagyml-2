@@ -89,7 +89,15 @@ impl SaveManager {
 	}
 
 	fn prompt_new_save_file() -> Result<String> {
-		let prompt = requestty::Question::input("Save file name").build();
+		println!();
+		let prompt = requestty::Question::input("Save file name")
+    		.validate(|file, _| {
+				if !sanitize_filename::is_sanitized(file) {
+					return Err("Invalid file name".to_owned())
+				}
+				Ok(())
+			})
+			.build();
 		let answer = requestty::prompt_one(prompt)?;
 		Ok(format!("{}.yml", answer.as_string().unwrap()))
 	}
