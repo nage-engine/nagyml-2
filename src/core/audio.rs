@@ -136,9 +136,13 @@ impl Audio {
 	}
 
 	/// Applies a [`SoundAction`] to a particular channel.
-	pub fn accept(&self, action: &SoundAction, text_context: &TextContext) -> Result<()> {
+	pub fn accept(&self, player: &Player, action: &SoundAction, text_context: &TextContext) -> Result<()> {
 		let channel = action.channel.fill(text_context)?;
-		let player = self.get_player(&channel)?;
+		let audio_player = self.get_player(&channel)?;
+		
+		if !player.channels.contains(&channel) {
+			return Ok(());
+		}
 
 		let seek = action.seek.as_ref().map(|ms| {
 			ms.get_value(text_context).map(|amt| Duration::from_millis(amt))
@@ -147,17 +151,17 @@ impl Audio {
 		let mode = action.mode.get_value(text_context)?;
 
 		match &action.name {
-			None => Self::accept_general_actions(player, seek, mode),
+			None => Self::accept_general_actions(audio_player, seek, mode),
 			Some(name) => {
 				let sound = name.fill(text_context)?;
 				let sfx = self.sounds.get(&sound)
 					.ok_or(anyhow!("Invalid sound file '{sound}'"))?;
-				Self::accept_mode(player, sfx, seek, mode);
+				Self::accept_mode(audio_player, sfx, seek, mode);
 			}
 		}
 
 		if let Some(speed) = &action.speed {
-			player.set_playback_speed(speed.get_value(text_context)?);
+			audio_player.set_playback_speed(speed.get_value(text_context)?);
 		}
 
 		Ok(())

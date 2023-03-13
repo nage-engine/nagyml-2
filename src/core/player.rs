@@ -220,7 +220,7 @@ impl Player {
 			self.variables.extend(values);
 		}
 		// Info pages are not stored in history entries, so we can fill the name here
-		if let Some(pages) = &choice.info {
+		if let Some(pages) = &choice.info_pages {
 			for page in pages {
 				self.info_pages.insert(page.fill(text_context)?);
 			}
@@ -241,7 +241,7 @@ impl Player {
 		if let Some(audio) = &resources.audio {
 			if let Some(sounds) = &choice.sounds {
 				for sound in sounds {
-					audio.accept(sound, text_context)?;
+					audio.accept(&self, sound, text_context)?;
 				}
 			}
 		}

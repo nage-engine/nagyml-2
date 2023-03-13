@@ -5,8 +5,16 @@ use crate::{core::{prompt::{Prompt, PromptModel}, text::{Text, TextContext}, man
 use super::{gloop::{next_input_context, take_input, GameLoopResult}, input::InputController};
 
 pub fn first_play_init(config: &Manifest, player: &mut Player, resources: &Resources) -> Result<()> {
+	let text_context = TextContext::new(config, player.notes.clone(), player.variables.clone(), &player.lang, resources);
 	if let Some(background) = &config.entry.background {
-		Text::print_lines_nl(background, &TextContext::new(config, player.notes.clone(), player.variables.clone(), &player.lang, resources))?;
+		Text::print_lines_nl(background, &text_context)?;
+	}
+	if let Some(audio) = &resources.audio {
+		if let Some(sounds) = config.entry.sounds.clone() {
+			for sound in sounds {
+				audio.accept(player, &sound.into(), &text_context)?;
+			}
+		}
 	}
 	player.began = true;
 	Ok(())

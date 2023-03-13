@@ -70,6 +70,12 @@ pub struct TemplatableString {
 	pub content: String
 }
 
+impl From<String> for TemplatableString {
+    fn from(content: String) -> Self {
+		TemplatableString { content }
+    }
+}
+
 impl TemplatableString {
 	/// The default value for an undefined interpolation component.
 	pub const DEFAULT_VALUE: &'static str = "UNDEFINED";

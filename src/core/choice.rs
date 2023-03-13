@@ -110,7 +110,8 @@ pub struct Choice {
 	pub notes: Option<NoteActions>,
 	pub variables: Option<VariableApplications>,
 	pub log: Option<TemplatableString>,
-	pub info: Option<Vec<TemplatableString>>,
+	#[serde(rename = "info")]
+	pub info_pages: Option<Vec<TemplatableString>>,
 	pub sounds: Option<Vec<SoundAction>>,
 	pub ending: Option<TextLines>
 }

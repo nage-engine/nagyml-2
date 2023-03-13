@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::loading::base::Loader;
 
-use super::{choice::{Variables, Notes}, text::{TextSpeed, TextLines, TemplatableValue}, player::PathEntry, resources::UnlockedInfoPages};
+use super::{choice::{Variables, Notes, SoundAction, SoundActionMode}, text::{TextSpeed, TextLines, TemplatableValue}, player::PathEntry, resources::UnlockedInfoPages};
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
@@ -77,6 +77,26 @@ impl Settings {
 	}
 }
 
+#[derive(Deserialize, Debug, Clone)]
+pub struct EntrypointSoundAction {
+	name: String,
+	channel: String,
+	seek: Option<u64>,
+	speed: Option<f64>
+}
+
+impl Into<SoundAction> for EntrypointSoundAction {
+    fn into(self) -> SoundAction {
+        SoundAction { 
+			name: Some(self.name.into()), 
+			channel: self.channel.into(), 
+			mode: TemplatableValue::value(SoundActionMode::default()), 
+			seek: self.seek.map(TemplatableValue::value), 
+			speed: self.speed.map(TemplatableValue::value) 
+		}
+    }
+}
+
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Entrypoint {
@@ -86,7 +106,8 @@ pub struct Entrypoint {
 	pub variables: Option<Variables>,
 	#[serde(rename = "info")]
 	pub info_pages: Option<UnlockedInfoPages>,
-	pub log: Option<Vec<String>>
+	pub log: Option<Vec<String>>,
+	pub sounds: Option<Vec<EntrypointSoundAction>>
 }
 
 #[derive(Deserialize, Debug)]
