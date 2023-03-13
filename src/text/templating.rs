@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{str::FromStr, fmt::Display};
 
 use anyhow::{Result, anyhow, Context};
 use serde::{Deserialize, Serialize, de::{DeserializeOwned, Error as DeError}, Deserializer};
@@ -101,20 +101,27 @@ pub struct TemplatableValue<T> {
 	pub template: Option<TemplatableString>
 }
 
-impl<'de, T> Deserialize<'de> for TemplatableValue<T> where T: DeserializeOwned + Clone + FromStr {
-    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error> where D: Deserializer<'de> {
-		let string = String::deserialize(deserializer)?;
-		let result = serde_yaml::from_str::<T>(&string).map_err(DeError::custom)
-			.map(|value| TemplatableValue {
-				value: Some(value),
-				template: None
-			});
+impl<T> TryFrom<String> for TemplatableValue<T> where T: Clone + FromStr {
+    type Error = <T as FromStr>::Err;
+
+    fn try_from(string: String) -> std::result::Result<Self, Self::Error> {
+		let result = string.parse::<T>().map(TemplatableValue::value);
 		if let Err(_) = &result {
 			if TemplatableString::is_str_templatable(&string) {
 				return Ok(TemplatableValue::template(string));
 			}
 		}
 		result
+    }
+}
+
+impl<'de, T> Deserialize<'de> for TemplatableValue<T> 
+	where 
+		T: DeserializeOwned + Clone + FromStr, 
+		<T as FromStr>::Err: Display {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error> where D: Deserializer<'de> {
+		let string = String::deserialize(deserializer)?;
+		TemplatableValue::try_from(string).map_err(DeError::custom)
     }
 }
 
