@@ -3,7 +3,7 @@ use std::{fmt::{Display, Debug}, time::Duration, str::FromStr};
 use anyhow::{Result, anyhow, Context as ContextTrait};
 use crossterm::style::Stylize;
 use rlua::{Table, Context};
-use serde::{Deserialize, Deserializer, de::{Error as DeError, DeserializeOwned}};
+use serde::{Deserialize, Deserializer, de::{Error as DeError, DeserializeOwned}, Serialize};
 use snailshell::{snailprint_s, snailprint_d};
 use strum::EnumString;
 
@@ -173,13 +173,26 @@ impl<'de, T> Deserialize<'de> for TemplatableValue<T> where T: DeserializeOwned 
     }
 }
 
+impl<T> Serialize for TemplatableValue<T> where T: Serialize + Clone + ToString {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error> where S: serde::Serializer {
+		if let Some(value) = &self.value {
+			return value.serialize(serializer);
+		}
+		if let Some(template) = &self.template {
+			return template.content.serialize(serializer);
+		}
+		unreachable!()
+    }
+}
+
 impl<T> Default for TemplatableValue<T> where T: Default {
 	fn default() -> Self {
 		Self::value(T::default())
 	}
 }
 
-impl<T> TemplatableValue<T>  {	
+impl<T> TemplatableValue<T> {
+	/// Constructs a [`TemplatableValue`] from the actual value type.	
 	pub fn value(value: T) -> Self {
 		Self {
 			value: Some(value),
@@ -187,6 +200,7 @@ impl<T> TemplatableValue<T>  {
 		}
 	}
 
+	/// Constructs a [`TemplatableValue`] from a templatable string.
 	pub fn template(content: String) -> Self {
 		Self {
 			value: None,
@@ -194,6 +208,10 @@ impl<T> TemplatableValue<T>  {
 		}
 	}
 
+	/// Gets the value of type `T` from the templatable value.
+	/// 
+	/// If the value is provided as-is, returns a clone of that value.
+	/// If the value is a templatable string, fills and parses that string as a value of type `T`.
 	pub fn get_value<E>(&self, context: &TextContext) -> Result<T>
 		where
 			T: Clone + FromStr<Err = E>, anyhow::Error: From<E> {
