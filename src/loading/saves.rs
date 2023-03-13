@@ -13,6 +13,7 @@ pub struct SaveManager {
 impl SaveManager {
 	pub fn dir(config: &Manifest, create: bool) -> Result<PathBuf> {
 		let dir = Loader::config_dir()?
+    		.join("games")
 			.join(config.metadata.game_id())
 			.join("saves");
 		if !dir.exists() {
