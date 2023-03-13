@@ -17,6 +17,8 @@ mod cmd;
 mod loading;
 mod text;
 
+pub const NAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 fn run(path: PathBuf, pick: bool, new: bool) -> Result<()> {
     // Create content loader
     let loader = Loader::new(path);

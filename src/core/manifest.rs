@@ -1,10 +1,10 @@
-use std::collections::{HashMap, HashSet};
+use std::{collections::{HashMap, HashSet}, str::FromStr};
 
-use anyhow::{Result, anyhow};
-use semver::Version;
+use anyhow::{Result, anyhow, Context};
+use semver::{Version, VersionReq};
 use serde::Deserialize;
 
-use crate::{loading::base::Loader, text::{display::{TextSpeed, TextLines}, templating::TemplatableValue}};
+use crate::{loading::base::Loader, text::{display::{TextSpeed, TextLines}, templating::TemplatableValue}, NAGE_VERSION};
 
 use super::{choice::{Variables, Notes, SoundAction, SoundActionMode}, player::PathEntry, resources::UnlockedInfoPages};
 
@@ -22,6 +22,20 @@ pub struct Metadata {
 impl Metadata {
 	pub fn game_id(&self) -> &str {
 		self.id.as_ref().unwrap_or(&self.name)
+	}
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(default, deny_unknown_fields)]
+pub struct Dependencies {
+	pub nage: VersionReq
+}
+
+impl Default for Dependencies {
+	fn default() -> Self {
+		Self { 
+			nage: VersionReq::STAR
+		}
 	}
 }
 
@@ -114,6 +128,8 @@ pub struct Entrypoint {
 #[serde(deny_unknown_fields)]
 pub struct Manifest {
 	pub metadata: Metadata,
+	#[serde(default)]
+	pub dependencies: Dependencies,
 	pub settings: Settings,
 	pub entry: Entrypoint
 }
@@ -123,14 +139,20 @@ impl Manifest {
 
 	pub fn load(loader: &Loader) -> Result<Self> {
 		let config: Self = loader.load_file(Self::FILE)?;
-		config.validate()?;
+		config.validate().with_context(|| "Failed to validate manifest")?;
 		Ok(config)
 	}
 
 	fn validate(&self) -> Result<()> {
-		let size = self.settings.history.size;
-		if size == 0 {
-			return Err(anyhow!("Failed to validate manifest: `settings.history.size` must be non-zero"));
+		if self.settings.history.size == 0 {
+			return Err(anyhow!("`settings.history.size` must be non-zero"));
+		}
+		let nage_version = Version::from_str(NAGE_VERSION)?;
+		if !self.dependencies.nage.matches(&nage_version) {
+			return Err(anyhow!(
+				"dependency `nage` does not match required version (required: {}, provided: {})", 
+				self.dependencies.nage, NAGE_VERSION
+			))
 		}
 		Ok(())
 	}
