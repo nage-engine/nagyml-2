@@ -112,7 +112,8 @@ impl Audio {
 		}
 		match mode {
 			Skip => player.skip(),
-			Playing(is_playing) => player.set_playing(is_playing),
+			Playing => player.set_playing(true),
+			Paused => player.set_playing(false),
 			_ => ()
 		}
 	}

@@ -1,13 +1,13 @@
 use std::{collections::HashMap, fmt::Display};
 
 use anyhow::{Result, Context, anyhow};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{loading::base::{ContentFile, Contents}, text::{context::TextContext, display::{Text, TextLines}, templating::TemplatableString}};
 
 use super::{choice::{Choices, Choice, Notes}, player::PathEntry};
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
 /// The standard gameplay container to which a player visits during a playthrough.
 /// 

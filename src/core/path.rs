@@ -1,12 +1,12 @@
 use anyhow::Result;
 use result::OptionResultExt;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::text::{templating::TemplatableString, context::TextContext};
 
 use super::player::PathEntry;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Path {
 	pub file: Option<TemplatableString>,

@@ -2,15 +2,15 @@ use std::{fmt::{Display, Debug}, time::Duration};
 
 use anyhow::Result;
 use crossterm::style::Stylize;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use snailshell::{snailprint_s, snailprint_d};
-use strum::EnumString;
+use strum::{EnumString, Display};
 
 use crate::loading::base::{ContentFile, Contents};
 
 use super::{templating::{TemplatableValue, TemplatableString}, context::TextContext};
 
-#[derive(Deserialize, Debug, PartialEq, Clone, EnumString)]
+#[derive(Deserialize, Serialize, Display, Debug, PartialEq, Clone, EnumString)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 /// Represents how text should be formatted disregarding its contents.
@@ -45,7 +45,7 @@ impl TextMode {
 }
 
 /// The speed at which text should be printed.
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum TextSpeed {
 	/// The amount of milliseconds to wait between each character.
@@ -94,7 +94,7 @@ impl TextSpeed {
 	}
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
 /// A formattable piece of text.
 pub struct Text {

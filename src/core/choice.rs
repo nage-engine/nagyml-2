@@ -6,12 +6,12 @@ use super::{path::Path, prompt::{Prompts, Prompt, PromptModel}, player::{History
 
 use anyhow::{Result, anyhow, Context};
 use result::OptionResultExt;
-use serde::Deserialize;
-use strum::EnumString;
+use serde::{Deserialize, Serialize};
+use strum::{EnumString, Display};
 
 pub fn default_true() -> TemplatableValue<bool> { TemplatableValue::value(true) }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct NoteApplication {
 	pub name: TemplatableString,
@@ -19,7 +19,7 @@ pub struct NoteApplication {
 	pub take: TemplatableValue<bool>,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct NoteRequirement {
 	name: TemplatableString,
@@ -27,7 +27,7 @@ pub struct NoteRequirement {
 	has: TemplatableValue<bool>
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct NoteActions {
 	pub apply: Option<Vec<NoteApplication>>,
@@ -55,7 +55,7 @@ impl NoteActions {
 /// A list of string symbols tracked on a player.
 pub type Notes = HashSet<String>;
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct VariableInput {
 	pub text: Option<TemplatableString>,
@@ -68,7 +68,7 @@ pub type Variables = HashMap<String, String>;
 
 pub type VariableApplications = HashMap<String, TemplatableString>;
 
-#[derive(Deserialize, Debug, Clone, EnumString)]
+#[derive(Deserialize, Serialize, Display, Debug, Clone, EnumString)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 pub enum SoundActionMode {
@@ -76,7 +76,8 @@ pub enum SoundActionMode {
 	Overwrite,
 	Passive,
 	Skip,
-	Playing(bool)
+	Playing,
+	Paused
 }
 
 impl Default for SoundActionMode {
@@ -85,7 +86,7 @@ impl Default for SoundActionMode {
 	}
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct SoundAction {
 	pub name: Option<TemplatableString>,
@@ -96,7 +97,7 @@ pub struct SoundAction {
 	pub speed: Option<TemplatableValue<f64>>
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Choice {
 	pub response: Option<Text>,
