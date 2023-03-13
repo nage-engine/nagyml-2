@@ -62,7 +62,7 @@ impl<'a> TextContext<'a> {
 	}
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Serialize, Debug)]
 #[serde(transparent)]
 /// A string that is able to undergo transformations based on templating variables or custom scripts
 /// or via translation file matching.
@@ -179,7 +179,7 @@ impl<T> Serialize for TemplatableValue<T> where T: Serialize + Clone + ToString 
 			return value.serialize(serializer);
 		}
 		if let Some(template) = &self.template {
-			return template.content.serialize(serializer);
+			return template.serialize(serializer);
 		}
 		unreachable!()
     }
