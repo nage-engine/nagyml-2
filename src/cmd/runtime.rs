@@ -98,20 +98,16 @@ impl RuntimeCommand {
 	}
 
 	/// Handles a [`Log`](RuntimeCommand::Log) command.
-	fn log(log: &Vec<String>) -> Result<CommandResult> {
-		if log.is_empty() {
+	fn log(player: &Player) -> Result<CommandResult> {
+		if player.log.is_empty() {
 			return Err(anyhow!("No log entries to display"))
 		}
 
 		println!();
-
-		let pages: Vec<&[String]> = log.chunks(5).collect();
-		let page_choices: Vec<String> = pages.iter()
-			.map(|chunk| chunk[0][..25].to_owned())
-			.map(|line| format!("{line}..."))
-			.collect();
+		
+		let pages = player.log_pages();
 		let page_question = requestty::Question::raw_select("Log page")
-			.choices(page_choices)
+			.choices(Player::log_page_fronts(&pages))
 			.build();
 		let page_choice = requestty::prompt_one(page_question)?;
 
@@ -128,9 +124,7 @@ impl RuntimeCommand {
 		println!();
 
 		// Multi-selection where selected represents the channel being enabled and vice versa
-		let channel_data: Vec<(String, bool)> = audio.players.keys()
-    		.map(|channel| (channel.clone(), player.channels.contains(channel)))
-    		.collect();
+		let channel_data = audio.channel_statuses(player);
 		let channel_selection = requestty::Question::multi_select("Select sound channels")
     		.choices_with_default(channel_data)
     		.build();
@@ -210,7 +204,7 @@ impl RuntimeCommand {
 			Back => Self::back(player)?,
 			Lang => Self::lang(player, &resources.translations)?,
 			Info => Self::info(&player.info_pages, &resources.info_pages)?,
-			Log => Self::log(&player.log)?,
+			Log => Self::log(&player)?,
 			Sound => Self::sound(player, &resources.audio)?,
 			Save => {
 				saves.write(player, None, false)?;

@@ -2,6 +2,7 @@ use std::{collections::{HashMap, HashSet, VecDeque}, vec};
 
 use anyhow::{Result, anyhow};
 use serde::{Serialize, Deserialize};
+use unicode_truncate::UnicodeTruncateStr;
 
 use crate::game::input::VariableInputResult;
 
@@ -144,7 +145,7 @@ impl Player {
 	/// 
 	/// If `take` is `true`, attempts to remove the note.
 	/// Otherwise, inserts the note if not already present.
-	pub fn apply_note(&mut self, name: &str, take: bool, reverse: bool) -> Result<()> {
+	fn apply_note(&mut self, name: &str, take: bool, reverse: bool) -> Result<()> {
 		let take = if reverse { !take } else { take };
 		if take {
 			self.notes.remove(name);
@@ -161,7 +162,7 @@ impl Player {
 	}
 
 	/// If the latest history entry is able to be reversed, pops and returns it from the entry list.
-	pub fn pop_latest_entry(player: &mut Player) -> Result<HistoryEntry> {
+	fn pop_latest_entry(player: &mut Player) -> Result<HistoryEntry> {
 		let latest = player.latest_entry()?;
 		if latest.locked {
 			return Err(anyhow!("Can't go back right now!"))
@@ -260,5 +261,19 @@ impl Player {
 	pub fn choose_full(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, resources: &Resources, model: &PromptModel, text_context: &TextContext) -> Result<()> {
 		self.choose(choice, input, config, model, resources, text_context)?;
 		self.try_push_log(choice, config, resources)
+	}
+
+	/// Returns the player's log entries split into readable chunks of five entries maximum.
+	pub fn log_pages(&self) -> Vec<&[String]> {
+		self.log.chunks(5).collect()
+	}
+
+	/// Gets the "front" of each page in a collection of [`Player::log_pages`]; that is, the first entry
+	/// in each page truncated to a readable length.
+	pub fn log_page_fronts(pages: &Vec<&[String]>) -> Vec<String> {
+		pages.iter()
+			.map(|chunk| chunk[0].unicode_truncate(25).0.to_owned())
+			.map(|line| format!("{line}..."))
+			.collect()
 	}
 }

@@ -7,7 +7,7 @@ use rlua::{Context, Table};
 
 use crate::loading::base::Loader;
 
-use super::{manifest::Manifest, choice::{SoundAction, SoundActionMode}, text::TextContext};
+use super::{manifest::Manifest, choice::{SoundAction, SoundActionMode}, text::TextContext, player::Player};
 
 /// A map of channel names to audio player instances and whether they are currently enabled.
 pub type AudioPlayers = HashMap<String, AudioPlayer>;
@@ -73,6 +73,21 @@ impl Audio {
     		.ok_or(anyhow!("Invalid sound channel '{channel}'"))
 	}
 
+	/// Returns this controller's channel names mapped to whether they are enabled on the [`Player`].
+	pub fn channel_statuses(&self, player: &Player) -> Vec<(String, bool)> {
+		self.players.keys()
+    		.map(|channel| (channel.clone(), player.channels.contains(channel)))
+    		.collect()
+	}
+
+	/// Creates a Lua table mapping each loaded audio player to a table of their data.
+	/// 
+	/// This table is formatted as follows:
+	/// - `is_playing`: Whether the player is not paused
+	/// - `has_sound`: Whether the player has a sound currently playing
+	/// - `has_sound_queued`: Whether the player has a sound queued, but not playing
+	/// - `position`: If the player has a sound playing, returns the position in milliseconds
+	/// - `sound_duration`: If the player has a sound playing, returns its duration in milliseconds
 	pub fn create_audio_table<'a>(&self, context: &Context<'a>) -> Result<Table<'a>, rlua::Error> {
 		let table = context.create_table()?;
 		for (channel, player) in &self.players {
@@ -82,7 +97,7 @@ impl Audio {
 			channel_table.set("has_sound_queued", player.has_next_song())?;
 			if let Some((pos, duration)) = player.get_playback_position() {
 				channel_table.set("position", pos.as_millis())?;
-				channel_table.set("song_duration", duration.as_millis())?;
+				channel_table.set("sound_duration", duration.as_millis())?;
 			}
 			table.set(channel.clone(), channel_table)?;
 		}
