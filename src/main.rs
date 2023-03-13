@@ -15,6 +15,7 @@ mod core;
 mod game;
 mod cmd;
 mod loading;
+mod text;
 
 fn run(path: PathBuf, pick: bool, new: bool) -> Result<()> {
     // Create content loader

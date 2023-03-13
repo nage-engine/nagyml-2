@@ -1,7 +1,7 @@
 use anyhow::{Result, anyhow};
 use clap::Parser;
 
-use crate::{core::{player::Player, prompt::Prompt as PromptUtil, manifest::Manifest, text::{Translations, TextContext}, choice::Notes, resources::{UnlockedInfoPages, InfoPages, Resources}, audio::Audio}, game::{gloop::GameLoopResult}, loading::saves::SaveManager};
+use crate::{core::{player::Player, prompt::Prompt as PromptUtil, manifest::Manifest, choice::Notes, resources::{UnlockedInfoPages, InfoPages, Resources}, audio::Audio}, game::{gloop::GameLoopResult}, loading::saves::SaveManager, text::{context::TextContext, display::Translations}};
 
 #[derive(Parser, Debug, PartialEq)]
 #[command(multicall = true)]

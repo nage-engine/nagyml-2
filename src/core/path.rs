@@ -2,7 +2,9 @@ use anyhow::Result;
 use result::OptionResultExt;
 use serde::Deserialize;
 
-use super::{text::{TemplatableString, TextContext}, player::PathEntry};
+use crate::text::{templating::TemplatableString, context::TextContext};
+
+use super::player::PathEntry;
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]

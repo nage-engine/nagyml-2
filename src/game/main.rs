@@ -1,6 +1,6 @@
 use anyhow::{Result, anyhow};
 
-use crate::{core::{prompt::{Prompt, PromptModel}, text::{Text, TextContext}, manifest::Manifest, player::Player, resources::Resources}, loading::saves::SaveManager};
+use crate::{core::{prompt::{Prompt, PromptModel}, manifest::Manifest, player::Player, resources::Resources}, loading::saves::SaveManager, text::{context::TextContext, display::Text}};
 
 use super::{gloop::{next_input_context, take_input, GameLoopResult}, input::InputController};
 

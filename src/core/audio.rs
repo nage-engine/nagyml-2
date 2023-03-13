@@ -5,9 +5,9 @@ use playback_rs::{Player as AudioPlayer, Song};
 use result::OptionResultExt;
 use rlua::{Context, Table};
 
-use crate::loading::base::Loader;
+use crate::{loading::base::Loader, text::context::TextContext};
 
-use super::{manifest::Manifest, choice::{SoundAction, SoundActionMode}, text::TextContext, player::Player};
+use super::{manifest::Manifest, choice::{SoundAction, SoundActionMode}, player::Player};
 
 /// A map of channel names to audio player instances and whether they are currently enabled.
 pub type AudioPlayers = HashMap<String, AudioPlayer>;

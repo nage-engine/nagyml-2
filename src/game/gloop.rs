@@ -1,7 +1,7 @@
 use anyhow::Result;
 use result::OptionResultExt;
 
-use crate::{core::{player::Player, manifest::Manifest, text::{Text, TextContext}, choice::Choice, prompt::PromptModel, resources::Resources}, cmd::runtime::{RuntimeCommand, CommandResult}, game::input::{InputContext, InputResult}, loading::saves::SaveManager};
+use crate::{core::{player::Player, manifest::Manifest, choice::Choice, prompt::PromptModel, resources::Resources}, cmd::runtime::{RuntimeCommand, CommandResult}, game::input::{InputContext, InputResult}, loading::saves::SaveManager, text::{display::Text, context::TextContext}};
 
 use super::input::InputController;
 

@@ -3,9 +3,7 @@ use rand::{Rng, thread_rng};
 use result::OptionResultExt;
 use rlua::{Lua, Context, Table, Function, Chunk};
 
-use crate::loading::base::{Loader, RawContents};
-
-use super::text::TextContext;
+use crate::{loading::base::{Loader, RawContents}, text::context::TextContext};
 
 #[derive(Debug)]
 /// A container for script files and script running context.

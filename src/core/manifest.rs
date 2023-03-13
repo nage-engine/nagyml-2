@@ -4,9 +4,9 @@ use anyhow::{Result, anyhow};
 use semver::Version;
 use serde::Deserialize;
 
-use crate::loading::base::Loader;
+use crate::{loading::base::Loader, text::{display::{TextSpeed, TextLines}, templating::TemplatableValue}};
 
-use super::{choice::{Variables, Notes, SoundAction, SoundActionMode}, text::{TextSpeed, TextLines, TemplatableValue}, player::PathEntry, resources::UnlockedInfoPages};
+use super::{choice::{Variables, Notes, SoundAction, SoundActionMode}, player::PathEntry, resources::UnlockedInfoPages};
 
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]

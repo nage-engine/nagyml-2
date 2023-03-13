@@ -2,9 +2,9 @@ use std::collections::{HashSet, BTreeMap};
 
 use anyhow::Result;
 
-use crate::loading::base::Loader;
+use crate::{loading::base::Loader, text::display::{Translations, TranslationFile}};
 
-use super::{scripts::Scripts, text::{Translations, TranslationFile}, prompt::{Prompts, Prompt}, audio::Audio, manifest::Manifest};
+use super::{scripts::Scripts, prompt::{Prompts, Prompt}, audio::Audio, manifest::Manifest};
 
 pub type InfoPages = BTreeMap<String, String>;
 pub type UnlockedInfoPages = HashSet<String>;

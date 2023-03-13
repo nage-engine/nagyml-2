@@ -1,8 +1,8 @@
 use std::{collections::{HashMap, HashSet}};
 
-use crate::game::input::VariableInputResult;
+use crate::{game::input::VariableInputResult, text::{templating::{TemplatableValue, TemplatableString}, context::TextContext, display::{Text, TextLines}}};
 
-use super::{text::{Text, TextLines, TemplatableString, TextContext, TemplatableValue}, path::Path, prompt::{Prompts, Prompt, PromptModel}, player::{HistoryEntry, VariableEntry, VariableEntries, NoteEntry, NoteEntries}, manifest::Manifest};
+use super::{path::Path, prompt::{Prompts, Prompt, PromptModel}, player::{HistoryEntry, VariableEntry, VariableEntries, NoteEntry, NoteEntries}, manifest::Manifest};
 
 use anyhow::{Result, anyhow, Context};
 use result::OptionResultExt;

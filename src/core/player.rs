@@ -4,9 +4,9 @@ use anyhow::{Result, anyhow};
 use serde::{Serialize, Deserialize};
 use unicode_truncate::UnicodeTruncateStr;
 
-use crate::game::input::VariableInputResult;
+use crate::{game::input::VariableInputResult, text::{templating::TemplatableString, context::TextContext}};
 
-use super::{choice::{NoteApplication, Notes, Variables, Choice, VariableApplications}, manifest::Manifest, text::{TextContext, TemplatableString}, resources::{UnlockedInfoPages, Resources}, prompt::PromptModel};
+use super::{choice::{NoteApplication, Notes, Variables, Choice, VariableApplications}, manifest::Manifest, resources::{UnlockedInfoPages, Resources}, prompt::PromptModel};
 
 #[derive(Serialize, Deserialize, Debug)]
 /// A single variable value recording.
