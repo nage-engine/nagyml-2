@@ -104,8 +104,14 @@ pub struct Text {
 	#[serde(default)]
 	/// The mode in which the text content should be formatted upon retrieval.
 	pub mode: TemplatableValue<TextMode>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	/// The speed at which the text should be printed.
 	pub speed: Option<TextSpeed>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	/// Whether to print a newline before the text.
 	pub newline: Option<TemplatableValue<bool>>,
+	#[serde(skip_serializing_if = "Option::is_none")]
+	/// How long, in milliseconds, to wait aftet the text is printed.
 	pub wait: Option<TemplatableValue<u64>>
 }
 

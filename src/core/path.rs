@@ -9,6 +9,7 @@ use super::player::PathEntry;
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Path {
+	#[serde(skip_serializing_if = "Option::is_none")]
 	pub file: Option<TemplatableString>,
 	pub prompt: TemplatableString
 }

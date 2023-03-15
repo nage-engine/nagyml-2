@@ -11,9 +11,10 @@ use super::{choice::{Choices, Choice, Notes}, player::PathEntry};
 #[serde(deny_unknown_fields)]
 /// The standard gameplay container to which a player visits during a playthrough.
 /// 
-/// When a player visits a prompt, they are optionally given some introductory text (a "text prompt"). The player then is given a list of choices, each jumping to a new prompt or ending the game.
+/// When a player visits a prompt, they are optionally given some introductory text (a "text prompt"). 
+/// The player then is given a list of choices, each jumping to a new prompt or ending the game.
 pub struct Prompt {
-	#[serde(rename = "prompt")]
+	#[serde(rename = "prompt", skip_serializing_if = "Option::is_none")]
 	pub text: Option<TextLines>,
 	pub choices: Choices
 }
