@@ -46,10 +46,7 @@ impl RuntimeCommand {
 	/// Determines if this command is allowed in a default, non-debug environment.
 	fn is_normal(&self) -> bool {
 		use RuntimeCommand::*;
-		match self {
-			Back | Lang | Info | Log | Sound | Save | Quit => true,
-			_ => false
-		}
+		matches!(&self, Back | Lang | Info | Log | Sound | Save | Quit)
 	}
 
 	/// Handles a [`Back`](RuntimeCommand::Back) command.

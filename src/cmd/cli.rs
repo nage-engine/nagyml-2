@@ -6,7 +6,7 @@ use requestty::Question;
 use semver::Version;
 use tinytemplate::TinyTemplate;
 
-use crate::{core::manifest::Manifest, loading::{base::Loader, saves::SaveManager}};
+use crate::{core::manifest::Manifest, loading::{base::Loader, saves::SaveManager}, cmd::builder::build_prompt};
 
 pub const TEMPLATE_MANIFEST: &'static str = include_str!("../template/nage.yml");
 pub const TEMPLATE_MAIN: &'static str = include_str!("../template/main.yml");
@@ -28,6 +28,8 @@ pub enum CliCommand {
 		#[arg(short, long, help = "Create all extra content directories")]
 		full: bool
 	},
+	#[command(about = "Build a prompt from the command line")]
+	Builder,
 	#[command(about = "Open the save directory")]
 	Saves
 }
@@ -73,6 +75,15 @@ impl CliCommand {
 		Ok(())
 	}
 
+	/// Handles a [`Builder`](CliCommand::Builder) command.
+	fn builder() -> Result<()> {
+		let prompt = build_prompt()?;
+		let yaml = serde_yaml::to_string(&prompt)?;
+		let stripped = yaml.strip_prefix("---").unwrap();
+		println!("{stripped}");
+		Ok(())
+	}
+
 	/// Handles a [`Saves`](CliCommand::Saves) command.
 	fn saves() -> Result<()> {
 		let loader = Loader::new(PathBuf::new());
@@ -85,6 +96,7 @@ impl CliCommand {
 		use CliCommand::*;
 		match self {
 			&New { full } => Self::new(full),
+			Builder => Self::builder(),
 			Saves => Self::saves(),
 			_ => unreachable!()
 		}

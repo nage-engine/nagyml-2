@@ -4,13 +4,13 @@ use anyhow::Result;
 use crossterm::style::Stylize;
 use serde::{Deserialize, Serialize};
 use snailshell::{snailprint_s, snailprint_d};
-use strum::{EnumString, Display};
+use strum::{EnumString, Display, EnumIter};
 
 use crate::loading::base::{ContentFile, Contents};
 
 use super::{templating::{TemplatableValue, TemplatableString}, context::TextContext};
 
-#[derive(Deserialize, Serialize, Display, Debug, PartialEq, Clone, EnumString)]
+#[derive(Deserialize, Serialize, Display, Debug, PartialEq, Clone, EnumString, EnumIter)]
 #[serde(rename_all = "snake_case")]
 #[strum(serialize_all = "snake_case")]
 /// Represents how text should be formatted disregarding its contents.

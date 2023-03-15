@@ -86,6 +86,14 @@ impl Default for SoundActionMode {
 	}
 }
 
+impl SoundActionMode {
+	/// Whether this action requires a specific sound file to be present.
+	pub fn is_specific(&self) -> bool {
+		use SoundActionMode::*;
+		matches!(&self, Queue | Overwrite | Passive)
+	}
+}
+
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct SoundAction {
