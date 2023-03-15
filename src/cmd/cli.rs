@@ -6,7 +6,7 @@ use requestty::Question;
 use semver::Version;
 use tinytemplate::TinyTemplate;
 
-use crate::{core::manifest::Manifest, loading::{base::Loader, saves::SaveManager}, cmd::builder::build_prompt};
+use crate::{core::manifest::Manifest, loading::{base::Loader, saves::SaveManager}, cmd::builder::prompt::build_prompt};
 
 pub const TEMPLATE_MANIFEST: &'static str = include_str!("../template/nage.yml");
 pub const TEMPLATE_MAIN: &'static str = include_str!("../template/main.yml");
