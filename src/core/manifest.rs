@@ -28,14 +28,31 @@ impl Metadata {
 #[derive(Deserialize, Debug)]
 #[serde(default, deny_unknown_fields)]
 pub struct Dependencies {
-	pub nage: VersionReq
+	pub nage: Option<VersionReq>
 }
 
 impl Default for Dependencies {
 	fn default() -> Self {
 		Self { 
-			nage: VersionReq::STAR
+			nage: None
 		}
+	}
+}
+
+impl Dependencies {
+	pub fn check(&self, nage_version: Version) -> Result<()> {
+		self.nage.as_ref().map(|nage| {
+			if !nage.matches(&nage_version) {
+				Err(anyhow!(
+					"dependency `nage` does not match required version (required: {}, provided: {})", 
+					nage, NAGE_VERSION
+				))
+			}
+			else {
+				Ok(())
+			}
+		})
+		.unwrap_or(Ok(()))
 	}
 }
 
@@ -150,12 +167,7 @@ impl Manifest {
 			return Err(anyhow!("`settings.history.size` must be non-zero"));
 		}
 		let nage_version = Version::from_str(NAGE_VERSION)?;
-		if !self.dependencies.nage.matches(&nage_version) {
-			return Err(anyhow!(
-				"dependency `nage` does not match required version (required: {}, provided: {})", 
-				self.dependencies.nage, NAGE_VERSION
-			))
-		}
+		self.dependencies.check(nage_version)?;
 		Ok(())
 	}
 }
