@@ -2,6 +2,7 @@ use std::{fmt::{Display, Debug}, time::Duration};
 
 use anyhow::Result;
 use crossterm::style::Stylize;
+use result::OptionResultExt;
 use serde::{Deserialize, Serialize};
 use snailshell::{snailprint_s, snailprint_d};
 use strum::{EnumString, Display, EnumIter};
@@ -129,10 +130,12 @@ impl Text {
 		Ok(self.mode.get_value(context)?.format(&self.content.fill(context)?))
 	}
 
-	fn wait(&self, context: &TextContext) -> Option<u64> {
-		self.wait.as_ref()
+	fn wait(&self, context: &TextContext) -> Result<Option<u64>> {
+		let result = self.wait.as_ref()
 			.map(|wait| wait.get_value(context))
-			.and(context.config.settings.wait)
+			.invert()?
+			.or(context.config.settings.wait);
+		Ok(result)
 	}
 
 	/// Formats and snailprints text based on its [`TextSpeed`]. 
@@ -141,7 +144,7 @@ impl Text {
 	pub fn print(&self, context: &TextContext) -> Result<()> {
 		let speed = self.speed.as_ref().unwrap_or(&context.config.settings.speed);
 		speed.print(&self.get(context)?, context)?;
-		if let &Some(wait) = &self.wait(context) {
+		if let &Some(wait) = &self.wait(context)? {
 			std::thread::sleep(Duration::from_millis(wait));
 		}
 		Ok(())
