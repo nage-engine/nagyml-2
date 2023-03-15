@@ -61,6 +61,7 @@ pub struct Settings {
 	pub save: bool,
 	pub debug: bool,
 	pub speed: TextSpeed,
+	pub wait: Option<u64>,
 	pub history: HistorySettings,
 	pub lang: Option<String>,
 	pub channels: Option<HashMap<String, bool>>
@@ -72,6 +73,7 @@ impl Default for Settings {
 			save: true,
 			debug: false,
 			speed: TextSpeed::Delay(TemplatableValue::value(5)),
+			wait: None,
 			history: HistorySettings::default(),
 			lang: None,
 			channels: None
