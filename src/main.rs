@@ -40,7 +40,9 @@ fn run(path: PathBuf, pick: bool, new: bool) -> Result<()> {
         println!("Exiting...");
     }
     // Save player data
-    saves.write(&player, save_file, new)?;
+    if config.settings.save {
+        saves.write(&player, save_file, new)?;
+    }
 
     Ok(())
 }
