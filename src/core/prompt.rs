@@ -3,7 +3,7 @@ use std::{collections::HashMap, fmt::Display};
 use anyhow::{Result, Context, anyhow};
 use serde::{Deserialize, Serialize};
 
-use crate::{loading::base::{ContentFile, Contents}, text::{context::TextContext, display::{Text, TextLines}, templating::TemplatableString}};
+use crate::{loading::loader::{ContentFile, Contents}, text::{context::TextContext, display::{Text, TextLines}, templating::TemplatableString}};
 
 use super::{choice::{Choices, Choice, Notes}, player::PathEntry};
 

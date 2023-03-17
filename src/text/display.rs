@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use snailshell::{snailprint_s, snailprint_d};
 use strum::{EnumString, Display, EnumIter};
 
-use crate::loading::base::{ContentFile, Contents};
+use crate::loading::loader::{ContentFile, Contents};
 
 use super::{templating::{TemplatableValue, TemplatableString}, context::TextContext};
 

@@ -5,7 +5,7 @@ use playback_rs::{Player as AudioPlayer, Song};
 use result::OptionResultExt;
 use rlua::{Context, Table};
 
-use crate::{loading::base::Loader, text::context::TextContext};
+use crate::{loading::loader::Loader, text::context::TextContext};
 
 use super::{manifest::Manifest, choice::{SoundAction, SoundActionMode}, player::Player};
 

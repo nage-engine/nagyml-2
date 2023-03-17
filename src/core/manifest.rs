@@ -4,7 +4,7 @@ use anyhow::{Result, anyhow, Context};
 use semver::{Version, VersionReq};
 use serde::Deserialize;
 
-use crate::{loading::base::Loader, text::{display::{TextSpeed, TextLines}, templating::TemplatableValue}, NAGE_VERSION};
+use crate::{loading::loader::Loader, text::{display::{TextSpeed, TextLines}, templating::TemplatableValue}, NAGE_VERSION};
 
 use super::{choice::{Variables, Notes, SoundAction, SoundActionMode}, player::PathEntry, resources::UnlockedInfoPages};
 
@@ -157,7 +157,7 @@ impl Manifest {
 	pub const FILE: &'static str = "nage.yml";
 
 	pub fn load(loader: &Loader) -> Result<Self> {
-		let config: Self = loader.load_file(Self::FILE)?;
+		let config: Self = loader.load(Self::FILE)?;
 		config.validate().with_context(|| "Failed to validate manifest")?;
 		Ok(config)
 	}

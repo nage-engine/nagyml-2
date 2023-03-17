@@ -1,10 +1,10 @@
 use std::{path::{PathBuf, Path}, ffi::OsStr};
 
-use anyhow::{Result, anyhow};
+use anyhow::{Result, anyhow, Context};
 
 use crate::core::{player::Player, manifest::Manifest};
 
-use super::base::Loader;
+use super::loader::Loader;
 
 pub struct SaveManager {
 	dir: PathBuf
@@ -44,7 +44,9 @@ impl SaveManager {
 	}
 
 	fn load_player<P>(&self, file: P) -> Result<Player> where P: AsRef<Path> {
-		Loader::load(self.dir.join(file))
+		let content = std::fs::read_to_string(self.dir.join(&file))?;
+		Loader::parse(content)
+			.with_context(|| anyhow!("Failed to parse save file '{}'", file.as_ref().display()))
 	}
 	
 	fn load_last_save(&self) -> Result<(Player, PathBuf)> {

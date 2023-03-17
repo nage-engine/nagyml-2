@@ -2,7 +2,7 @@ use std::collections::{HashSet, BTreeMap};
 
 use anyhow::Result;
 
-use crate::{loading::base::Loader, text::display::{Translations, TranslationFile}};
+use crate::{loading::loader::Loader, text::display::{Translations, TranslationFile}};
 
 use super::{scripts::Scripts, prompt::{Prompts, Prompt}, audio::Audio, manifest::Manifest};
 

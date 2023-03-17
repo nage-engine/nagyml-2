@@ -1,12 +1,13 @@
-use std::{collections::HashMap, path::PathBuf};
+use std::collections::HashMap;
 
 use anyhow::Result;
+use camino::Utf8PathBuf;
 use clap::Parser;
 use requestty::Question;
 use semver::Version;
 use tinytemplate::TinyTemplate;
 
-use crate::{core::manifest::Manifest, loading::{base::Loader, saves::SaveManager}, cmd::builder::prompt::build_prompt};
+use crate::{core::manifest::Manifest, loading::{loader::Loader, saves::SaveManager}, cmd::builder::prompt::build_prompt};
 
 pub const TEMPLATE_MANIFEST: &'static str = include_str!("../template/nage.yml");
 pub const TEMPLATE_MAIN: &'static str = include_str!("../template/main.yml");
@@ -17,7 +18,7 @@ pub enum CliCommand {
 	#[command(about = "Run a Nagame", alias = "r")]
 	Run {
 		#[arg(help = "The game directory. Defaults to the current directory")]
-		path: Option<PathBuf>,
+		path: Option<Utf8PathBuf>,
 		#[arg(short, long, help = "Start a new save file")]
 		new: bool,
 		#[arg(short, long, help = "Pick from a list of multiple saves instead of the last used")]
@@ -86,7 +87,7 @@ impl CliCommand {
 
 	/// Handles a [`Saves`](CliCommand::Saves) command.
 	fn saves() -> Result<()> {
-		let loader = Loader::new(PathBuf::new());
+		let loader = Loader::current_dir();
 		let config = Manifest::load(&loader)?;
 		let _ = open::that(SaveManager::dir(&config, false)?)?;
 		Ok(())

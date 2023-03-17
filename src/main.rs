@@ -1,15 +1,14 @@
 #![feature(result_flattening)]
 #![feature(iterator_try_collect)]
 
-use std::path::PathBuf;
-
 use crate::core::{manifest::Manifest, resources::Resources};
 
 use anyhow::{Result, Context};
+use camino::Utf8PathBuf;
 use clap::Parser;
 use cmd::cli::CliCommand;
 use game::{main::{begin, crash_context}, input::InputController};
-use loading::{base::Loader, saves::SaveManager};
+use loading::{loader::Loader, saves::SaveManager};
 
 mod core;
 mod game;
@@ -19,9 +18,12 @@ mod text;
 
 pub const NAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-fn run(path: PathBuf, pick: bool, new: bool) -> Result<()> {
+fn run(path: Utf8PathBuf, pick: bool, new: bool) -> Result<()> {
     // Create content loader
-    let loader = Loader::new(path);
+    let mapping = Loader::mapping(&path)?;
+    let archive = Loader::archive(&mapping)?;
+    let tree = Loader::tree(&archive)?;
+    let loader = Loader::new(path, &archive, &tree)?;
     // Load content and data
     let config = Manifest::load(&loader)?;
     let resources = Resources::load(&loader, &config)?;
@@ -52,7 +54,7 @@ fn main() -> Result<()> {
     // otherwise, uses its own method
     let command = CliCommand::parse();
     if let CliCommand::Run { path, pick, new } = command {
-        return run(path.unwrap_or(PathBuf::new()), pick, new);
+        return run(path.unwrap_or(Utf8PathBuf::from(".")), pick, new);
     }
     command.run()
 }
