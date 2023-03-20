@@ -116,7 +116,7 @@ impl Default for RichPresenceSettings {
 }
 
 impl RichPresenceSettings {
-	pub const APP_ID: &'static str = env!("NAGE_DISCORD_RPC_APP_ID");
+	pub const APP_ID: &'static str = "1086477002770489417";
 }
 
 pub struct RichPresence {
