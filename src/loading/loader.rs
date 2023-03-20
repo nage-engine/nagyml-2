@@ -32,7 +32,12 @@ pub struct KeyedPath(String, Utf8PathBuf);
 
 impl KeyedPath {
 	pub fn new<P>(path: Utf8PathBuf, kind: P) -> Self where P: AsRef<Utf8Path> {
-		KeyedPath(path.strip_prefix(kind.as_ref()).unwrap().with_extension("").to_string(), path)
+		let key = path
+			.strip_prefix(kind.as_ref()).unwrap()
+			.with_extension("")
+			.to_string()
+			.replace("\\", "/");
+		KeyedPath(key, path)
 	}
 }
 
@@ -119,7 +124,7 @@ impl<'a> Loader<'a> {
 		Ok(parsed)
 	}
 
-	pub fn read<P>(&self, path: P) -> Result<String> where P: AsRef<Utf8Path> {
+	fn read_internal<P>(&self, path: P) -> Result<String> where P: AsRef<Utf8Path> {
 		use Backend::*;
 		let full = self.get_path(path);
 		let result = match &self.backend {
@@ -133,10 +138,14 @@ impl<'a> Loader<'a> {
 		Ok(result)
 	}
 
+	pub fn read<P>(&self, path: P) -> Result<String> where P: AsRef<Utf8Path> {
+		self.read_internal(&path)
+    		.with_context(|| format!("{} doesn't exist", path.as_ref()))
+	}
+
 	/// Reads a file given a path and deserializes it into the specified type.
 	pub fn load<P, T>(&self, path: P) -> Result<T> where P: AsRef<Utf8Path>, T: DeserializeOwned {
-		let content = self.read(&path)
-    		.with_context(|| format!("{} doesn't exist", path.as_ref()))?;
+		let content = self.read(&path)?;
 		Self::parse(content)
     		.with_context(|| format!("Failed to parse {}", path.as_ref()))
 	}
@@ -187,7 +196,7 @@ impl<'a> Loader<'a> {
 
 	/// Iterates over content files, reads them, and combines their content into a [`String`] map.
 	pub fn load_raw_content<P>(&self, path: P) -> Result<RawContents> where P: AsRef<Utf8Path> {
-		self.map_content(path, |local| Ok(std::fs::read_to_string(local)?))
+		self.map_content(path, |local| Ok(self.read(local)?))
 	}
 
 	/// Iterates over content files, deserializes their content, and combines them into a [`Contents`] map.
