@@ -1147,7 +1147,7 @@ dependencies = [
 
 [[package]]
 name = "nage"
-version = "2.3.0-beta.2"
+version = "2.3.0-beta.3"
 dependencies = [
  "anyhow",
  "camino",
