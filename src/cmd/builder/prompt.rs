@@ -27,6 +27,14 @@ fn static_choice_answers() -> Result<Answers> {
 		input_builder("log")
 			.message("Log entry to append")
 			.when(|answers: &Answers| confirmed(answers, "use_log"))
+			.build(),
+		Question::confirm("use_drp")
+			.message("Should this choice modify Discord Rich Presence?")
+			.default(false)
+			.build(),
+		input_builder("drp")
+			.message("Rich Presence details")
+			.when(|answers: &Answers| confirmed(answers, "use_drp"))
 			.build()
 	]);
 
@@ -115,7 +123,8 @@ fn build_choice(model: usize) -> Result<Choice> {
 		log: static_answers.get("log").map(|log| log.as_string().unwrap().to_owned().into()),
 		info_pages,
 		sounds,
-		ending
+		ending,
+		drp: static_answers.get("drp").map(|drp| drp.as_string().unwrap().to_owned().into())
 	};
 
 	Ok(choice)

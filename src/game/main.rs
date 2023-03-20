@@ -1,6 +1,6 @@
 use anyhow::{Result, anyhow};
 
-use crate::{core::{prompt::{Prompt, PromptModel}, manifest::Manifest, player::Player, resources::Resources}, loading::saves::SaveManager, text::{context::TextContext, display::Text}};
+use crate::{core::{prompt::{Prompt, PromptModel}, manifest::{Manifest, RichPresence}, player::Player, resources::Resources}, loading::saves::SaveManager, text::{context::TextContext, display::Text}};
 
 use super::{gloop::{next_input_context, take_input, GameLoopResult}, input::InputController};
 
@@ -20,10 +20,13 @@ pub fn first_play_init(config: &Manifest, player: &mut Player, resources: &Resou
 	Ok(())
 }
 
-pub fn begin(config: &Manifest, player: &mut Player, saves: &SaveManager, resources: &Resources, input: &mut InputController) -> Result<bool> {
+pub fn begin(config: &Manifest, player: &mut Player, saves: &SaveManager, resources: &Resources, drpc: &mut Option<RichPresence>, input: &mut InputController) -> Result<bool> {
 	if !player.began {
 		first_play_init(config, player, resources)?;
 	}
+
+	config.set_rich_presence(drpc, player.latest_entry()?, &None, None, &None)?;
+	
 	let silent = 'outer: loop {
 		// Text context owns variables to avoid immutable and mutable borrow overlap
 		let text_context = TextContext::new(config, player.notes.clone(), player.variables.clone(), &player.lang, resources);
@@ -39,7 +42,7 @@ pub fn begin(config: &Manifest, player: &mut Player, saves: &SaveManager, resour
 		next_prompt.print(&model, entry.display, &choices, &text_context)?;
 
 		match model {
-			PromptModel::Redirect(choice) => player.choose_full(choice, None, config, resources, &model, &text_context)?,
+			PromptModel::Redirect(choice) => player.choose_full(choice, None, config, resources, drpc, &model, &text_context)?,
 			PromptModel::Ending(lines) => {
 				Text::print_lines(lines, &text_context)?;
 				break 'outer true
@@ -48,7 +51,7 @@ pub fn begin(config: &Manifest, player: &mut Player, saves: &SaveManager, resour
 				let context = next_input_context(&model, &choices, &text_context)?
 					.ok_or(anyhow!("Could not resolve input context"))?;
 				// Borrow-checker coercion; only using necessary fields in static method
-				match take_input(input, &context, config, player, saves, resources, &model, &text_context, &choices)? {
+				match take_input(input, &context, config, player, saves, resources, drpc, &model, &text_context, &choices)? {
 					GameLoopResult::Retry(flush) => if flush { println!() },
 					GameLoopResult::Continue => { println!(); break },
 					GameLoopResult::Shutdown(silent) => break 'outer silent

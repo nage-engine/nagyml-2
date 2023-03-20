@@ -32,10 +32,12 @@ fn run(path: Utf8PathBuf, pick: bool, new: bool) -> Result<()> {
     let (mut player, save_file) = saves.load(&config, pick, new)?;
     // Validate loaded resources
     resources.validate()?;
+    // Load rich presence
+    let mut drpc = config.connect_rich_presence();
     // Create input controller
     let mut input = InputController::new()?;
     // Begin game loop
-    let silent = begin(&config, &mut player, &saves, &resources, &mut input)
+    let silent = begin(&config, &mut player, &saves, &resources, &mut drpc, &mut input)
         .with_context(|| crash_context(&config))?;
     // Shut down game with silence based on game loop result
     if !silent {

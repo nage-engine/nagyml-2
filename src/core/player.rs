@@ -1,12 +1,13 @@
-use std::{collections::{HashMap, HashSet, VecDeque}, vec};
+use std::{collections::{HashMap, HashSet, VecDeque}, vec, fmt::Display};
 
 use anyhow::{Result, anyhow};
+use result::OptionResultExt;
 use serde::{Serialize, Deserialize};
 use unicode_truncate::UnicodeTruncateStr;
 
 use crate::{game::input::VariableInputResult, text::{templating::TemplatableString, context::TextContext}};
 
-use super::{choice::{NoteApplication, Notes, Variables, Choice, VariableApplications}, manifest::Manifest, resources::{UnlockedInfoPages, Resources}, prompt::PromptModel};
+use super::{choice::{NoteApplication, Notes, Variables, Choice, VariableApplications}, manifest::{Manifest, RichPresence}, resources::{UnlockedInfoPages, Resources}, prompt::PromptModel};
 
 #[derive(Serialize, Deserialize, Debug)]
 /// A single variable value recording.
@@ -68,6 +69,12 @@ impl NoteEntry {
 pub struct PathEntry {
 	pub file: String,
 	pub prompt: String
+}
+
+impl Display for PathEntry {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+		write!(f, "{}/{}", self.file, self.prompt)
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -248,19 +255,30 @@ impl Player {
 		Ok(())
 	}
 
-	pub fn try_push_log(&mut self, choice: &Choice, config: &Manifest, resources: &Resources) -> Result<()> {
-		if let Some(log) = &choice.log {
-			// Create a new text context using the new variable and note values for the logs
-			// Log page names are not stored in history entries, just whether they were given, so we can fill the name here
-			let new_text_context = TextContext::new(config, self.notes.clone(), self.variables.clone(), &self.lang, resources);
-			self.log.push(log.fill(&new_text_context)?);
-		}
+	pub fn after_choice(&mut self, choice: &Choice, config: &Manifest, resources: &Resources, drpc: &mut Option<RichPresence>) -> Result<()> {
+		//use RichP
+		// Create a new text context using the new variable and note values for the logs
+		// Log page names are not stored in history entries, just whether they were given, so we can fill the name here
+		let text_context = if choice.log.is_some() || choice.drp.is_some() {
+			Some(TextContext::new(config, self.notes.clone(), self.variables.clone(), &self.lang, resources))
+		} 
+		else { 
+			None 
+		};
+		// Apply log and Discord rich presence
+		let log_filled = choice.log.as_ref()
+			.map(|log| log.fill(text_context.as_ref().unwrap()))
+			.invert()?;
+		if let Some(log) = &log_filled {
+			self.log.push(log.clone());
+		};
+		config.set_rich_presence(drpc, self.latest_entry()?, &choice.drp, log_filled, &text_context)?;
 		Ok(())
 	}
 
-	pub fn choose_full(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, resources: &Resources, model: &PromptModel, text_context: &TextContext) -> Result<()> {
+	pub fn choose_full(&mut self, choice: &Choice, input: Option<&VariableInputResult>, config: &Manifest, resources: &Resources, drpc: &mut Option<RichPresence>, model: &PromptModel, text_context: &TextContext) -> Result<()> {
 		self.choose(choice, input, config, model, resources, text_context)?;
-		self.try_push_log(choice, config, resources)
+		self.after_choice(choice, config, resources, drpc)
 	}
 
 	/// Returns the player's log entries split into readable chunks of five entries maximum.

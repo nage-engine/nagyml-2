@@ -198,7 +198,10 @@ pub struct Choice {
 	/// Text lines to signify the ending of a game. Printed in the same way as prompt text.
 	/// If this ending choice is the only one in a prompt, `response` is optional.
 	/// If in this case `response` is [`None`], the prompt will have the [`Ending`](PromptModel::Ending) model.
-	pub ending: Option<TextLines>
+	pub ending: Option<TextLines>,
+	#[serde(alias = "discord rich presence", skip_serializing_if = "Option::is_none")]
+	/// A custom detail to show up in Discord Rich Presence after this choice is taken.
+	pub drp: Option<TemplatableString>
 }
 
 /// A list of ordered [`Choice`]s.
