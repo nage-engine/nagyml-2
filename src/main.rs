@@ -3,16 +3,19 @@
 
 use crate::core::{manifest::Manifest, resources::Resources};
 
-use anyhow::{Result, Context};
+use anyhow::{Context, Result};
 use camino::Utf8PathBuf;
 use clap::Parser;
 use cmd::cli::CliCommand;
-use game::{main::{begin, crash_context}, input::InputController};
+use game::{
+    input::InputController,
+    main::{begin, crash_context},
+};
 use loading::{loader::Loader, saves::SaveManager};
 
+mod cmd;
 mod core;
 mod game;
-mod cmd;
 mod loading;
 mod text;
 
@@ -55,7 +58,12 @@ fn main() -> Result<()> {
     // Parse CLI command - if 'run', use logic above
     // otherwise, uses its own method
     let command = CliCommand::parse();
-    if let CliCommand::Run { path, pick, new } = command {
+    if let CliCommand::Run {
+        path,
+        pick,
+        new,
+    } = command
+    {
         return run(path.unwrap_or(Utf8PathBuf::from(".")), pick, new);
     }
     command.run()

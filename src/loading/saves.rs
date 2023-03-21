@@ -1,128 +1,133 @@
-use std::{path::{PathBuf, Path}, ffi::OsStr};
+use std::{
+    ffi::OsStr,
+    path::{Path, PathBuf},
+};
 
-use anyhow::{Result, anyhow, Context};
+use anyhow::{anyhow, Context, Result};
 
-use crate::core::{player::Player, manifest::Manifest};
+use crate::core::{manifest::Manifest, player::Player};
 
 use super::loader::Loader;
 
 pub struct SaveManager {
-	dir: PathBuf
+    dir: PathBuf,
 }
 
 impl SaveManager {
-	pub fn generic_dir() -> Result<PathBuf> {
-		Ok(Loader::config_dir()?.join("games"))
-	}
+    pub fn generic_dir() -> Result<PathBuf> {
+        Ok(Loader::config_dir()?.join("games"))
+    }
 
-	pub fn game_dir(config: &Manifest) -> Result<PathBuf> {
-		let dir = Self::generic_dir()?
-			.join(config.metadata.game_id())
-			.join("saves");
-		Ok(dir)
-	}
+    pub fn game_dir(config: &Manifest) -> Result<PathBuf> {
+        let dir = Self::generic_dir()?.join(config.metadata.game_id()).join("saves");
+        Ok(dir)
+    }
 
-	fn dir(config: &Manifest) -> Result<PathBuf> {
-		let dir = Self::game_dir(config)?;
-		if !dir.exists() {
-			std::fs::create_dir_all(&dir)?;
-		}
-		Ok(dir)
-	}
+    fn dir(config: &Manifest) -> Result<PathBuf> {
+        let dir = Self::game_dir(config)?;
+        if !dir.exists() {
+            std::fs::create_dir_all(&dir)?;
+        }
+        Ok(dir)
+    }
 
-	pub fn new(config: &Manifest) -> Result<Self> {
-		let saves = Self { 
-			dir: SaveManager::dir(config)?
-		};
-		Ok(saves)
-	}
+    pub fn new(config: &Manifest) -> Result<Self> {
+        let saves = Self {
+            dir: SaveManager::dir(config)?,
+        };
+        Ok(saves)
+    }
 
-	fn save_name_storage(&self) -> PathBuf {
-		self.dir.join("save.txt")
-	}
+    fn save_name_storage(&self) -> PathBuf {
+        self.dir.join("save.txt")
+    }
 
-	fn last_save_file(&self) -> Result<String> {
-		std::fs::read_to_string(self.save_name_storage())
-    		.map_err(|err| anyhow!(err))
-	}
+    fn last_save_file(&self) -> Result<String> {
+        std::fs::read_to_string(self.save_name_storage()).map_err(|err| anyhow!(err))
+    }
 
-	fn load_player<P>(&self, file: P) -> Result<Player> where P: AsRef<Path> {
-		let content = std::fs::read_to_string(self.dir.join(&file))?;
-		Loader::parse(content)
-			.with_context(|| anyhow!("Failed to parse save file '{}'", file.as_ref().display()))
-	}
-	
-	fn load_last_save(&self) -> Result<(Player, PathBuf)> {
-		let file = self.last_save_file()?;
-		Ok((self.load_player(file.clone())?, PathBuf::from(file)))
-	}
+    fn load_player<P>(&self, file: P) -> Result<Player>
+    where
+        P: AsRef<Path>,
+    {
+        let content = std::fs::read_to_string(self.dir.join(&file))?;
+        Loader::parse(content)
+            .with_context(|| anyhow!("Failed to parse save file '{}'", file.as_ref().display()))
+    }
 
-	fn saves(&self) -> Result<Vec<PathBuf>> {
-		let result = std::fs::read_dir(&self.dir)?
-			.filter_map(|entry| entry.ok())
-			.map(|entry| entry.path())
-			.filter(|path| path.extension().and_then(OsStr::to_str).map(|p| p == "yml").unwrap_or(false))
-			.collect();
-		Ok(result)
-	}
+    fn load_last_save(&self) -> Result<(Player, PathBuf)> {
+        let file = self.last_save_file()?;
+        Ok((self.load_player(file.clone())?, PathBuf::from(file)))
+    }
 
-	fn choose_save(saves: &Vec<PathBuf>) -> Result<PathBuf> {
-		let save_names: Vec<&str> = saves.iter()
-    		.map(|save| save.file_stem().and_then(OsStr::to_str).unwrap())
-			.collect();
-		let prompt = requestty::Question::select("Choose a save file")
-    		.choices(save_names)
-			.build();
-		let choice = requestty::prompt_one(prompt)?.as_list_item().unwrap().index;
+    fn saves(&self) -> Result<Vec<PathBuf>> {
+        let result = std::fs::read_dir(&self.dir)?
+            .filter_map(|entry| entry.ok())
+            .map(|entry| entry.path())
+            .filter(|path| {
+                path.extension().and_then(OsStr::to_str).map(|p| p == "yml").unwrap_or(false)
+            })
+            .collect();
+        Ok(result)
+    }
 
-		println!();
+    fn choose_save(saves: &Vec<PathBuf>) -> Result<PathBuf> {
+        let save_names: Vec<&str> =
+            saves.iter().map(|save| save.file_stem().and_then(OsStr::to_str).unwrap()).collect();
+        let prompt = requestty::Question::select("Choose a save file").choices(save_names).build();
+        let choice = requestty::prompt_one(prompt)?.as_list_item().unwrap().index;
 
-		Ok(saves[choice].clone())
-	}
+        println!();
 
-	pub fn load(&self, config: &Manifest, pick: bool, new: bool) -> Result<(Player, Option<PathBuf>)> {
-		let saves = self.saves()?;
-		if new || saves.is_empty() {
-			return Ok((Player::new(config), None));
-		}
-		if pick {
-			let save = Self::choose_save(&saves)?;
-			Ok((self.load_player(&save)?, Some(save)))
-		}
-		else {
-			self.load_last_save().map(|(player, path)| (player, Some(path)))
-		}
-	}
+        Ok(saves[choice].clone())
+    }
 
-	fn prompt_new_save_file() -> Result<String> {
-		println!();
-		let prompt = requestty::Question::input("Save file name")
-    		.validate(|file, _| {
-				if !sanitize_filename::is_sanitized(file) {
-					return Err("Invalid file name".to_owned())
-				}
-				Ok(())
-			})
-			.build();
-		let answer = requestty::prompt_one(prompt)?;
-		Ok(format!("{}.yml", answer.as_string().unwrap()))
-	}
-	
-	fn write_player(&self, save_file: &PathBuf, player: &Player) {
-		if let Ok(content) = serde_yaml::to_string(player) {
-			let _ = std::fs::write(self.dir.join(&save_file), content);
-		}	
-	}
+    pub fn load(
+        &self,
+        config: &Manifest,
+        pick: bool,
+        new: bool,
+    ) -> Result<(Player, Option<PathBuf>)> {
+        let saves = self.saves()?;
+        if new || saves.is_empty() {
+            return Ok((Player::new(config), None));
+        }
+        if pick {
+            let save = Self::choose_save(&saves)?;
+            Ok((self.load_player(&save)?, Some(save)))
+        } else {
+            self.load_last_save().map(|(player, path)| (player, Some(path)))
+        }
+    }
 
-	pub fn write(&self, player: &Player, save_file: Option<PathBuf>, new: bool) -> Result<()> {
-		let save = if new || save_file.is_none() {
-			PathBuf::from(Self::prompt_new_save_file()?)
-		}
-		else {
-			save_file.unwrap()
-		};
-		self.write_player(&save, player);
-		let _ = std::fs::write(self.save_name_storage(), save.to_str().unwrap());
-		Ok(())
-	}
+    fn prompt_new_save_file() -> Result<String> {
+        println!();
+        let prompt = requestty::Question::input("Save file name")
+            .validate(|file, _| {
+                if !sanitize_filename::is_sanitized(file) {
+                    return Err("Invalid file name".to_owned());
+                }
+                Ok(())
+            })
+            .build();
+        let answer = requestty::prompt_one(prompt)?;
+        Ok(format!("{}.yml", answer.as_string().unwrap()))
+    }
+
+    fn write_player(&self, save_file: &PathBuf, player: &Player) {
+        if let Ok(content) = serde_yaml::to_string(player) {
+            let _ = std::fs::write(self.dir.join(&save_file), content);
+        }
+    }
+
+    pub fn write(&self, player: &Player, save_file: Option<PathBuf>, new: bool) -> Result<()> {
+        let save = if new || save_file.is_none() {
+            PathBuf::from(Self::prompt_new_save_file()?)
+        } else {
+            save_file.unwrap()
+        };
+        self.write_player(&save, player);
+        let _ = std::fs::write(self.save_name_storage(), save.to_str().unwrap());
+        Ok(())
+    }
 }
