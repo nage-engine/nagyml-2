@@ -25,7 +25,11 @@ pub enum CliCommand {
         path: Option<Utf8PathBuf>,
         #[arg(short, long, help = "Start a new save file")]
         new: bool,
-        #[arg(short, long, help = "Pick from a list of multiple saves instead of the last used")]
+        #[arg(
+            short,
+            long,
+            help = "Pick from a list of multiple saves instead of the last used"
+        )]
         pick: bool,
     },
     #[command(about = "Create a new Nagame template")]
@@ -46,7 +50,11 @@ impl CliCommand {
             Question::input("author").message("Author").build(),
             Question::input("version")
                 .message("Version")
-                .validate(|ver, _| Version::parse(ver).map(|_| ()).map_err(|err| err.to_string()))
+                .validate(|ver, _| {
+                    Version::parse(ver)
+                        .map(|_| ())
+                        .map_err(|err| err.to_string())
+                })
                 .build(),
         ]);
 
@@ -103,9 +111,7 @@ impl CliCommand {
     pub fn run(&self) -> Result<()> {
         use CliCommand::*;
         match self {
-            &New {
-                full,
-            } => Self::new(full),
+            &New { full } => Self::new(full),
             Builder => Self::builder(),
             Saves => Self::saves(),
             _ => unreachable!(),

@@ -25,9 +25,10 @@ impl InputContext {
         use InputContext::*;
         match self {
             Choices(_) => Self::PROMPT.to_owned(),
-            Variable(_, prompt) => {
-                prompt.clone().map(|s| format!("{s}: ")).unwrap_or(Self::PROMPT.to_owned())
-            }
+            Variable(_, prompt) => prompt
+                .clone()
+                .map(|s| format!("{s}: "))
+                .unwrap_or(Self::PROMPT.to_owned()),
         }
     }
 }
@@ -36,7 +37,10 @@ pub struct VariableInputResult(pub String, pub String);
 
 impl VariableInputResult {
     pub fn to_variable_entry(&self, variables: &Variables) -> (&String, VariableEntry) {
-        (&self.0, VariableEntry::new(&self.0, self.1.clone(), variables))
+        (
+            &self.0,
+            VariableEntry::new(&self.0, self.1.clone(), variables),
+        )
     }
 }
 
@@ -57,8 +61,12 @@ impl InputController {
 
     pub fn parse_command(line: String) -> Result<RuntimeCommand> {
         // Split line into command + arguments after '.' starting character
-        let args: Vec<String> =
-            line.strip_prefix(".").unwrap().split(" ").map(|s| s.to_owned()).collect();
+        let args: Vec<String> = line
+            .strip_prefix(".")
+            .unwrap()
+            .split(" ")
+            .map(|s| s.to_owned())
+            .collect();
         RuntimeCommand::try_parse_from(args).map_err(|e| anyhow!(e))
     }
 
@@ -71,16 +79,18 @@ impl InputController {
         }
         match context {
             &InputContext::Choices(choices) => {
-                let choice =
-                    line.parse::<usize>().map_err(|_| anyhow!("Input must be a number"))?;
+                let choice = line
+                    .parse::<usize>()
+                    .map_err(|_| anyhow!("Input must be a number"))?;
                 if choice < 1 || choice > choices {
                     return Err(anyhow!("Input out of range"));
                 }
                 Ok(InputResult::Choice(choice))
             }
-            InputContext::Variable(name, _) => {
-                Ok(InputResult::Variable(VariableInputResult(name.clone(), line)))
-            }
+            InputContext::Variable(name, _) => Ok(InputResult::Variable(VariableInputResult(
+                name.clone(),
+                line,
+            ))),
         }
     }
 

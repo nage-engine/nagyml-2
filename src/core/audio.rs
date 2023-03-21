@@ -51,7 +51,9 @@ impl Audio {
 
     /// Loads and parses [`Sounds`] from the `sounds` directory.
     fn load_sounds(loader: &Loader) -> Result<Sounds> {
-        loader.map_content("sounds", |path| Song::from_file(path, None).map_err(|err| anyhow!(err)))
+        loader.map_content("sounds", |path| {
+            Song::from_file(path, None).map_err(|err| anyhow!(err))
+        })
     }
 
     /// Loads an [`Audio`] container.
@@ -63,12 +65,9 @@ impl Audio {
     pub fn load(loader: &Loader, config: &Manifest) -> Result<Option<Self>> {
         Self::load_players(config)
             .map(|result| {
-                result.ok().map(|players| {
-                    Self::load_sounds(loader).map(|sounds| Self {
-                        players,
-                        sounds,
-                    })
-                })
+                result
+                    .ok()
+                    .map(|players| Self::load_sounds(loader).map(|sounds| Self { players, sounds }))
             })
             .flatten()
             .invert()
@@ -76,7 +75,9 @@ impl Audio {
 
     /// Retrieves an [`AudioPlayer`], if any, by a channel name.
     pub fn get_player(&self, channel: &str) -> Result<&AudioPlayer> {
-        self.players.get(channel).ok_or(anyhow!("Invalid sound channel '{channel}'"))
+        self.players
+            .get(channel)
+            .ok_or(anyhow!("Invalid sound channel '{channel}'"))
     }
 
     /// Returns this controller's channel names mapped to whether they are enabled on the [`Player`].
@@ -164,7 +165,10 @@ impl Audio {
         let seek = action
             .seek
             .as_ref()
-            .map(|ms| ms.get_value(text_context).map(|amt| Duration::from_millis(amt)))
+            .map(|ms| {
+                ms.get_value(text_context)
+                    .map(|amt| Duration::from_millis(amt))
+            })
             .invert()?;
 
         let mode = action.mode.get_value(text_context)?;
@@ -173,7 +177,10 @@ impl Audio {
             None => Self::accept_general_actions(audio_player, seek, mode),
             Some(name) => {
                 let sound = name.fill(text_context)?;
-                let sfx = self.sounds.get(&sound).ok_or(anyhow!("Invalid sound file '{sound}'"))?;
+                let sfx = self
+                    .sounds
+                    .get(&sound)
+                    .ok_or(anyhow!("Invalid sound file '{sound}'"))?;
                 Self::accept_mode(audio_player, sfx, seek, mode);
             }
         }

@@ -32,7 +32,9 @@ pub fn build_path() -> Result<Path> {
 
     let path = Path {
         prompt: answers["prompt"].as_string().unwrap().to_owned().into(),
-        file: answers.get("file").map(|answer| answer.as_string().unwrap().to_owned().into()),
+        file: answers
+            .get("file")
+            .map(|answer| answer.as_string().unwrap().to_owned().into()),
     };
 
     Ok(path)
@@ -71,7 +73,9 @@ pub fn build_sound_action() -> Result<SoundAction> {
             .message("Position, in milliseconds")
             .when(|answers: &Answers| confirmed(answers, "use_seek"))
             .validate(|seek, _| {
-                TryInto::<u64>::try_into(seek).map(|_| ()).map_err(|err| err.to_string())
+                TryInto::<u64>::try_into(seek)
+                    .map(|_| ())
+                    .map_err(|err| err.to_string())
             })
             .build(),
         Question::confirm("use_speed")
@@ -87,10 +91,14 @@ pub fn build_sound_action() -> Result<SoundAction> {
     let answers = module.prompt_all()?;
 
     let action = SoundAction {
-        name: answers.get("sound").map(|answer| answer.as_string().unwrap().to_owned().into()),
+        name: answers
+            .get("sound")
+            .map(|answer| answer.as_string().unwrap().to_owned().into()),
         channel: answers["channel"].as_string().unwrap().to_owned().into(),
         mode: TemplatableValue::value(
-            SoundActionMode::iter().nth(answers["mode"].as_list_item().unwrap().index).unwrap(),
+            SoundActionMode::iter()
+                .nth(answers["mode"].as_list_item().unwrap().index)
+                .unwrap(),
         ),
         seek: answers
             .get("seek")
@@ -144,10 +152,18 @@ fn build_note_requirement() -> Result<NoteRequirement> {
 
 pub fn build_note_actions() -> Result<NoteActions> {
     let apply = build_option("Apply notes?", false, || {
-        build_vec("Add another note application?", false, build_note_application)
+        build_vec(
+            "Add another note application?",
+            false,
+            build_note_application,
+        )
     })?;
     let require = build_option("Require notes?", false, || {
-        build_vec("Add another note requirement?", false, build_note_requirement)
+        build_vec(
+            "Add another note requirement?",
+            false,
+            build_note_requirement,
+        )
     })?;
 
     let module = PromptModule::new(vec![
@@ -166,7 +182,9 @@ pub fn build_note_actions() -> Result<NoteActions> {
     let actions = NoteActions {
         apply,
         require,
-        once: answers.get("once").map(|answer| answer.as_string().unwrap().to_owned().into()),
+        once: answers
+            .get("once")
+            .map(|answer| answer.as_string().unwrap().to_owned().into()),
     };
 
     Ok(actions)
@@ -193,7 +211,9 @@ pub fn build_variable_applications() -> Result<VariableApplications> {
 pub fn build_input() -> Result<VariableInput> {
     let module = PromptModule::new(vec![
         input_builder("name").message("Variable name").build(),
-        Question::confirm("use_text").message("Should the input use a custom prompt?").build(),
+        Question::confirm("use_text")
+            .message("Should the input use a custom prompt?")
+            .build(),
         input_builder("text")
             .message("Variable prompt")
             .when(|answers: &Answers| confirmed(answers, "use_text"))
@@ -204,7 +224,9 @@ pub fn build_input() -> Result<VariableInput> {
 
     let input = VariableInput {
         name: answers["name"].as_string().unwrap().to_owned().into(),
-        text: answers.get("text").map(|text| text.as_string().unwrap().to_owned().into()),
+        text: answers
+            .get("text")
+            .map(|text| text.as_string().unwrap().to_owned().into()),
     };
 
     Ok(input)

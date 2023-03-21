@@ -122,5 +122,8 @@ pub fn crash_context(config: &Manifest) -> String {
         let strings: Vec<String> = info.iter().map(|value| format!("- {value}")).collect();
         format!("\n\nContact the developers:\n{}", strings.join("\n"))
     });
-    format!("The game has crashed; it's not your fault!{}", contact.unwrap_or(String::new()))
+    format!(
+        "The game has crashed; it's not your fault!{}",
+        contact.unwrap_or(String::new())
+    )
 }

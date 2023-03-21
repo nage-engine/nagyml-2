@@ -47,7 +47,11 @@ impl VariableEntry {
         variables: &Variables,
         text_context: &TextContext,
     ) -> Result<Self> {
-        Ok(VariableEntry::new(name, value.fill(text_context)?, variables))
+        Ok(VariableEntry::new(
+            name,
+            value.fill(text_context)?,
+            variables,
+        ))
     }
 
     pub fn from_map(
@@ -160,7 +164,11 @@ impl Player {
         let entry = HistoryEntry::new(&config.entry.path);
         Self {
             began: false,
-            lang: config.settings.lang.clone().unwrap_or(String::from("en_us")),
+            lang: config
+                .settings
+                .lang
+                .clone()
+                .unwrap_or(String::from("en_us")),
             channels: config.settings.enabled_channels(),
             notes: config.entry.notes.clone().unwrap_or(HashSet::new()),
             variables: config.entry.variables.clone().unwrap_or(HashMap::new()),
@@ -175,11 +183,7 @@ impl Player {
     /// If `take` is `true`, attempts to remove the note.
     /// Otherwise, inserts the note if not already present.
     fn apply_note(&mut self, name: &str, take: bool, reverse: bool) -> Result<()> {
-        let take = if reverse {
-            !take
-        } else {
-            take
-        };
+        let take = if reverse { !take } else { take };
         if take {
             self.notes.remove(name);
         } else {
@@ -251,8 +255,10 @@ impl Player {
             }
         }
         if let Some(variables) = &entry.variables {
-            let values: Variables =
-                variables.iter().map(|(k, v)| (k.clone(), v.value.clone())).collect();
+            let values: Variables = variables
+                .iter()
+                .map(|(k, v)| (k.clone(), v.value.clone()))
+                .collect();
             self.variables.extend(values);
         }
         // Info pages are not stored in history entries, so we can fill the name here
@@ -316,8 +322,11 @@ impl Player {
             None
         };
         // Apply log and Discord rich presence
-        let log_filled =
-            choice.log.as_ref().map(|log| log.fill(text_context.as_ref().unwrap())).invert()?;
+        let log_filled = choice
+            .log
+            .as_ref()
+            .map(|log| log.fill(text_context.as_ref().unwrap()))
+            .invert()?;
         if let Some(log) = &log_filled {
             self.log.push(log.clone());
         };

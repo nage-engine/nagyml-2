@@ -17,12 +17,20 @@ pub struct Path {
 impl Path {
     pub fn is_not_templatable(&self) -> bool {
         self.prompt.is_templatable()
-            && self.file.as_ref().map(|t| t.is_templatable()).unwrap_or(false)
+            && self
+                .file
+                .as_ref()
+                .map(|t| t.is_templatable())
+                .unwrap_or(false)
     }
 
     pub fn fill(&self, full: &PathEntry, text_context: &TextContext) -> Result<PathEntry> {
-        let file =
-            self.file.as_ref().map(|t| t.fill(text_context)).invert()?.unwrap_or(full.file.clone());
+        let file = self
+            .file
+            .as_ref()
+            .map(|t| t.fill(text_context))
+            .invert()?
+            .unwrap_or(full.file.clone());
         Ok(PathEntry {
             file,
             prompt: self.prompt.fill(text_context)?,

@@ -69,16 +69,18 @@ pub type Prompts = Contents<Prompt>;
 impl Prompt {
     /// Finds a specific prompt file within a [`Prompts`] object.
     pub fn get_file<'a>(prompts: &'a Prompts, file: &str) -> Result<&'a PromptFile> {
-        prompts.get(file).ok_or(anyhow!("Invalid prompt file '{file}'"))
+        prompts
+            .get(file)
+            .ok_or(anyhow!("Invalid prompt file '{file}'"))
     }
 
     /// Finds a specific prompt within a [`Prompts`] object.
     pub fn get<'a>(prompts: &'a Prompts, name: &str, file: &str) -> Result<&'a Prompt> {
         Self::get_file(prompts, file)
             .map(|prompt_file| {
-                prompt_file
-                    .get(name)
-                    .ok_or(anyhow!("Invalid prompt '{name}'; not found in file '{file}'"))
+                prompt_file.get(name).ok_or(anyhow!(
+                    "Invalid prompt '{name}'; not found in file '{file}'"
+                ))
             })
             .flatten()
     }
@@ -98,12 +100,14 @@ impl Prompt {
             .iter()
             .enumerate()
             .map(|(index, choice)| {
-                choice.validate(file, has_company, prompts).with_context(|| {
-                    format!(
-                        "Error when validating choice #{} of prompt '{name}' in file '{file}'",
-                        index + 1
-                    )
-                })
+                choice
+                    .validate(file, has_company, prompts)
+                    .with_context(|| {
+                        format!(
+                            "Error when validating choice #{} of prompt '{name}' in file '{file}'",
+                            index + 1
+                        )
+                    })
             })
             .collect()
     }

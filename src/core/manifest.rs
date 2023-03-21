@@ -54,9 +54,7 @@ pub struct Dependencies {
 
 impl Default for Dependencies {
     fn default() -> Self {
-        Self {
-            nage: None,
-        }
+        Self { nage: None }
     }
 }
 
@@ -98,9 +96,7 @@ impl Default for HistorySettings {
 #[serde(rename_all = "snake_case")]
 pub enum RichPresenceMode {
     Id,
-    Custom {
-        fallback: bool,
-    },
+    Custom { fallback: bool },
 }
 
 impl RichPresenceMode {
@@ -114,19 +110,11 @@ impl RichPresenceMode {
         use RichPresenceMode::*;
         let result = match self {
             Id => Some(latest.path.to_string()),
-            &Custom {
-                fallback,
-            } => {
-                drp.as_ref().map(|drp| drp.fill(text_context.as_ref().unwrap())).invert()?.and_then(
-                    |_| {
-                        if fallback {
-                            log
-                        } else {
-                            None
-                        }
-                    },
-                )
-            }
+            &Custom { fallback } => drp
+                .as_ref()
+                .map(|drp| drp.fill(text_context.as_ref().unwrap()))
+                .invert()?
+                .and_then(|_| if fallback { log } else { None }),
         };
         Ok(result)
     }
@@ -161,23 +149,29 @@ pub struct RichPresence {
 
 impl RichPresence {
     fn new() -> Option<Self> {
-        DiscordIpcClient::new(RichPresenceSettings::APP_ID).ok().and_then(|mut client| {
-            client.connect().ok()?;
-            let now = SystemTime::now();
-            let since = now.duration_since(time::UNIX_EPOCH).expect("Time went backwards...");
-            Some(Self {
-                start: since.as_secs() as i64,
-                client,
+        DiscordIpcClient::new(RichPresenceSettings::APP_ID)
+            .ok()
+            .and_then(|mut client| {
+                client.connect().ok()?;
+                let now = SystemTime::now();
+                let since = now
+                    .duration_since(time::UNIX_EPOCH)
+                    .expect("Time went backwards...");
+                Some(Self {
+                    start: since.as_secs() as i64,
+                    client,
+                })
             })
-        })
     }
 
     fn icon<'a>(settings: &'a RichPresenceSettings, game_name: &'a str) -> Assets<'a> {
         let assets = Assets::new();
         match &settings.icon {
-            Some(url) => {
-                assets.large_image(url).large_text(game_name).small_image("icon").small_text("nage")
-            }
+            Some(url) => assets
+                .large_image(url)
+                .large_text(game_name)
+                .small_image("icon")
+                .small_text("nage"),
             None => assets.large_image("icon").large_text("nage"),
         }
     }
@@ -253,7 +247,10 @@ impl Settings {
         self.channels
             .as_ref()
             .map(|map| {
-                map.iter().filter(|(_, &enabled)| enabled).map(|(key, _)| key.clone()).collect()
+                map.iter()
+                    .filter(|(_, &enabled)| enabled)
+                    .map(|(key, _)| key.clone())
+                    .collect()
             })
             .unwrap_or(HashSet::new())
     }
@@ -308,7 +305,9 @@ impl Manifest {
 
     pub fn load(loader: &Loader) -> Result<Self> {
         let config: Self = loader.load(Self::FILE)?;
-        config.validate().with_context(|| "Failed to validate manifest")?;
+        config
+            .validate()
+            .with_context(|| "Failed to validate manifest")?;
         Ok(config)
     }
 

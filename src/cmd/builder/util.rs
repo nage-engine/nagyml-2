@@ -4,13 +4,20 @@ use requestty::{question::InputBuilder, Answer, Answers, Question};
 /// Confirms that a specific answer condition has been met.
 /// For use in a question builder `when` clause.
 pub fn confirmed(answers: &Answers, id: &str) -> bool {
-    answers.get(id).and_then(|answer| answer.as_bool()).unwrap_or(false)
+    answers
+        .get(id)
+        .and_then(|answer| answer.as_bool())
+        .unwrap_or(false)
 }
 
 /// Checks that a specific list index was chosen.
 /// For use in a question builder `when` clause.
 pub fn check_select(answers: &Answers, id: &str, index: usize) -> bool {
-    answers.get(id).and_then(Answer::as_list_item).map(|item| item.index == index).unwrap_or(false)
+    answers
+        .get(id)
+        .and_then(Answer::as_list_item)
+        .map(|item| item.index == index)
+        .unwrap_or(false)
 }
 
 /// Repeats a building function and appends it to a result list
@@ -42,11 +49,7 @@ where
 {
     let use_q = Question::confirm(confirm).default(default).build();
     let use_s = requestty::prompt_one(use_q)?.as_bool().unwrap();
-    let result = if use_s {
-        Some(build()?)
-    } else {
-        None
-    };
+    let result = if use_s { Some(build()?) } else { None };
     println!();
     Ok(result)
 }

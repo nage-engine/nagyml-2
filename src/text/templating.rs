@@ -20,9 +20,7 @@ pub struct TemplatableString {
 
 impl From<String> for TemplatableString {
     fn from(content: String) -> Self {
-        TemplatableString {
-            content,
-        }
+        TemplatableString { content }
     }
 }
 
@@ -78,7 +76,10 @@ impl TemplatableString {
     /// It bears no difference to actual text content, but if it can be found within a lang file, that value will be used.
     /// Thus, it is vital that the value is retrieved before any formatting is performed on the content.
     fn lang_file_content<'a>(&'a self, lang_file: Option<&'a TranslationFile>) -> &'a String {
-        lang_file.map(|file| file.get(&self.content)).flatten().unwrap_or(&self.content)
+        lang_file
+            .map(|file| file.get(&self.content))
+            .flatten()
+            .unwrap_or(&self.content)
     }
 
     fn fill_variable<'a>(
@@ -91,8 +92,9 @@ impl TemplatableString {
 
     pub fn fill(&self, context: &TextContext) -> Result<String> {
         let content = self.lang_file_content(context.lang_file);
-        let scripted =
-            Self::template(content, '(', ')', move |var| context.scripts.get(var, context))?;
+        let scripted = Self::template(content, '(', ')', move |var| {
+            context.scripts.get(var, context)
+        })?;
         Self::template(&scripted, '<', '>', move |var| {
             let filled = Self::fill_variable(var, &context.variables, &context).map(|s| s.clone());
             Ok(filled)
@@ -178,9 +180,7 @@ impl<T> TemplatableValue<T> {
     pub fn template(content: String) -> Self {
         Self {
             value: None,
-            template: Some(TemplatableString {
-                content,
-            }),
+            template: Some(TemplatableString { content }),
         }
     }
 
@@ -198,9 +198,15 @@ impl<T> TemplatableValue<T> {
         }
         if let Some(string) = &self.template {
             let filled = string.fill(context)?;
-            let result = filled.parse::<T>().map_err(|err| anyhow!(err)).with_context(|| {
-                format!("Failed to parse value '{filled}' templated from '{}'", string.content)
-            })?;
+            let result = filled
+                .parse::<T>()
+                .map_err(|err| anyhow!(err))
+                .with_context(|| {
+                    format!(
+                        "Failed to parse value '{filled}' templated from '{}'",
+                        string.content
+                    )
+                })?;
             return Ok(result);
         }
         unreachable!()

@@ -48,7 +48,11 @@ fn prompt_text_answers() -> Result<Answers> {
             .build(),
         Question::expand("newline")
             .message("Should this and the next line be separated?")
-            .choices(vec![('y', "Yes"), ('n', "No"), ('m', "Separate by mode difference")])
+            .choices(vec![
+                ('y', "Yes"),
+                ('n', "No"),
+                ('m', "Separate by mode difference"),
+            ])
             .default('m')
             .build(),
         Question::confirm("use_wait")
@@ -72,7 +76,9 @@ fn get_text_speed(answers: &Answers) -> Option<TextSpeed> {
         let index = answer.as_list_item().unwrap().index;
 
         if index == 1 {
-            Rate(TemplatableValue::value(answers["speed_input"].as_float().unwrap() as f32))
+            Rate(TemplatableValue::value(
+                answers["speed_input"].as_float().unwrap() as f32,
+            ))
         } else {
             let value = TemplatableValue::value(answers["speed_input"].as_int().unwrap() as usize);
             match index {
@@ -86,7 +92,9 @@ fn get_text_speed(answers: &Answers) -> Option<TextSpeed> {
 
 pub fn build_text(full: bool, kind: &str) -> Result<Text> {
     let module = PromptModule::new(vec![
-        input_builder("text").message(format!("{kind} text content")).build(),
+        input_builder("text")
+            .message(format!("{kind} text content"))
+            .build(),
         text_mode_question(full),
     ]);
 
@@ -109,12 +117,15 @@ pub fn build_text(full: bool, kind: &str) -> Result<Text> {
     let text = Text {
         content: answers["text"].as_string().unwrap().to_owned().into(),
         mode: TemplatableValue::value(
-            TextMode::iter().nth(answers["mode"].as_list_item().unwrap().index).unwrap(),
+            TextMode::iter()
+                .nth(answers["mode"].as_list_item().unwrap().index)
+                .unwrap(),
         ),
         speed: prompt_answers.as_ref().and_then(get_text_speed),
         newline: newline.map(TemplatableValue::value),
         wait: prompt_answers.as_ref().and_then(|ans| {
-            ans.get("wait").map(|answer| TemplatableValue::value(answer.as_int().unwrap() as u64))
+            ans.get("wait")
+                .map(|answer| TemplatableValue::value(answer.as_int().unwrap() as u64))
         }),
     };
 

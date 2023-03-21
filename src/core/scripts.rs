@@ -28,7 +28,9 @@ impl Scripts {
     /// Modifies a Lua [`Context`] to ensure stateful randomness between different loaded contexts.
     fn random_seed(&self, context: &Context) -> Result<(), rlua::Error> {
         let fake_time: u32 = thread_rng().gen();
-        context.load(&format!("math.randomseed({fake_time})")).exec()
+        context
+            .load(&format!("math.randomseed({fake_time})"))
+            .exec()
     }
 
     /// Adds global values to the specified [`Context`] based on the text context.
@@ -50,9 +52,13 @@ impl Scripts {
         let vars_table = context.create_table_from(text_context.variables.clone())?;
         context.globals().set("notes", notes_seq)?;
         context.globals().set("variables", vars_table)?;
-        context.globals().set("nage", text_context.create_variable_table(context)?)?;
+        context
+            .globals()
+            .set("nage", text_context.create_variable_table(context)?)?;
         if let Some(audio) = text_context.audio {
-            context.globals().set("audio", audio.create_audio_table(context)?)?;
+            context
+                .globals()
+                .set("audio", audio.create_audio_table(context)?)?;
         }
         Ok(())
     }

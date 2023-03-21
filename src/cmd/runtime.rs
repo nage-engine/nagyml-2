@@ -36,7 +36,10 @@ pub enum RuntimeCommand {
     Prompt,
     #[command(about = "List the currently applied notes", hide = true)]
     Notes,
-    #[command(about = "List the currently applied variable names and their values", hide = true)]
+    #[command(
+        about = "List the currently applied variable names and their values",
+        hide = true
+    )]
     Variables,
 }
 
@@ -78,8 +81,9 @@ impl RuntimeCommand {
 
         println!();
 
-        let lang_question =
-            requestty::Question::select("Select a language").choices(translations.keys()).build();
+        let lang_question = requestty::Question::select("Select a language")
+            .choices(translations.keys())
+            .build();
         let lang_choice = requestty::prompt_one(lang_question)?;
         player.lang = lang_choice.as_list_item().unwrap().text.clone();
 
@@ -94,12 +98,17 @@ impl RuntimeCommand {
 
         println!();
 
-        let info_question =
-            requestty::Question::select("Select an info page").choices(unlocked_pages).build();
+        let info_question = requestty::Question::select("Select an info page")
+            .choices(unlocked_pages)
+            .build();
         let info_choice = requestty::prompt_one(info_question)?;
 
         println!();
-        termimad::print_text(pages.get(&info_choice.as_list_item().unwrap().text).unwrap());
+        termimad::print_text(
+            pages
+                .get(&info_choice.as_list_item().unwrap().text)
+                .unwrap(),
+        );
 
         Ok(CommandResult::retry())
     }
@@ -118,14 +127,18 @@ impl RuntimeCommand {
             .build();
         let page_choice = requestty::prompt_one(page_question)?;
 
-        let page_content = pages.get(page_choice.as_list_item().unwrap().index).unwrap();
+        let page_content = pages
+            .get(page_choice.as_list_item().unwrap().index)
+            .unwrap();
         let entries = page_content.join("\n\n");
         Ok(CommandResult::Output(format!("\n{entries}")))
     }
 
     /// Handles a [`Sound`](RuntimeCommand::Sound) command.
     fn sound(player: &mut Player, audio_res: &Option<Audio>) -> Result<CommandResult> {
-        let audio = audio_res.as_ref().ok_or(anyhow!("No sound channels loaded"))?;
+        let audio = audio_res
+            .as_ref()
+            .ok_or(anyhow!("No sound channels loaded"))?;
 
         println!();
 
@@ -166,8 +179,9 @@ impl RuntimeCommand {
     ) -> Result<CommandResult> {
         println!();
 
-        let file_question =
-            requestty::Question::select("Prompt file").choices(resources.prompts.keys()).build();
+        let file_question = requestty::Question::select("Prompt file")
+            .choices(resources.prompts.keys())
+            .build();
         let file_choice = requestty::prompt_one(file_question)?;
         let file = &file_choice.as_list_item().unwrap().text;
 

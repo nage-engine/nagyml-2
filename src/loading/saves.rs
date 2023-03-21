@@ -19,7 +19,9 @@ impl SaveManager {
     }
 
     pub fn game_dir(config: &Manifest) -> Result<PathBuf> {
-        let dir = Self::generic_dir()?.join(config.metadata.game_id()).join("saves");
+        let dir = Self::generic_dir()?
+            .join(config.metadata.game_id())
+            .join("saves");
         Ok(dir)
     }
 
@@ -65,16 +67,23 @@ impl SaveManager {
             .filter_map(|entry| entry.ok())
             .map(|entry| entry.path())
             .filter(|path| {
-                path.extension().and_then(OsStr::to_str).map(|p| p == "yml").unwrap_or(false)
+                path.extension()
+                    .and_then(OsStr::to_str)
+                    .map(|p| p == "yml")
+                    .unwrap_or(false)
             })
             .collect();
         Ok(result)
     }
 
     fn choose_save(saves: &Vec<PathBuf>) -> Result<PathBuf> {
-        let save_names: Vec<&str> =
-            saves.iter().map(|save| save.file_stem().and_then(OsStr::to_str).unwrap()).collect();
-        let prompt = requestty::Question::select("Choose a save file").choices(save_names).build();
+        let save_names: Vec<&str> = saves
+            .iter()
+            .map(|save| save.file_stem().and_then(OsStr::to_str).unwrap())
+            .collect();
+        let prompt = requestty::Question::select("Choose a save file")
+            .choices(save_names)
+            .build();
         let choice = requestty::prompt_one(prompt)?.as_list_item().unwrap().index;
 
         println!();
@@ -96,7 +105,8 @@ impl SaveManager {
             let save = Self::choose_save(&saves)?;
             Ok((self.load_player(&save)?, Some(save)))
         } else {
-            self.load_last_save().map(|(player, path)| (player, Some(path)))
+            self.load_last_save()
+                .map(|(player, path)| (player, Some(path)))
         }
     }
 

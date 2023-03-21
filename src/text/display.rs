@@ -138,7 +138,10 @@ pub type Translations = Contents<String>;
 impl Text {
     /// Retrieves text content with [`TemplatableString::fill`] and formats it based on the [`TextMode`].
     pub fn get(&self, context: &TextContext) -> Result<String> {
-        Ok(self.mode.get_value(context)?.format(&self.content.fill(context)?))
+        Ok(self
+            .mode
+            .get_value(context)?
+            .format(&self.content.fill(context)?))
     }
 
     fn wait(&self, context: &TextContext) -> Result<Option<u64>> {
@@ -155,7 +158,10 @@ impl Text {
     ///
     /// If the text object does not contain a `speed` field, defaults to the provided config settings.
     pub fn print(&self, context: &TextContext) -> Result<()> {
-        let speed = self.speed.as_ref().unwrap_or(&context.config.settings.speed);
+        let speed = self
+            .speed
+            .as_ref()
+            .unwrap_or(&context.config.settings.speed);
         speed.print(&self.get(context)?, context)?;
         if let &Some(wait) = &self.wait(context)? {
             std::thread::sleep(Duration::from_millis(wait));
@@ -166,11 +172,14 @@ impl Text {
     /// Whether a newline should be printed before this line.
     /// Uses the `newline` key, otherwise defaulting to comparing the [`TextMode`] between this and the previous line, if any.
     fn is_newline(&self, previous: Option<&Text>, context: &TextContext) -> Result<bool> {
-        self.newline.as_ref().map(|nl| nl.get_value(context)).unwrap_or(
-            previous
-                .map(|line| Ok(self.mode.get_value(context)? != line.mode.get_value(context)?))
-                .unwrap_or(Ok(false)),
-        )
+        self.newline
+            .as_ref()
+            .map(|nl| nl.get_value(context))
+            .unwrap_or(
+                previous
+                    .map(|line| Ok(self.mode.get_value(context)? != line.mode.get_value(context)?))
+                    .unwrap_or(Ok(false)),
+            )
     }
 
     /// Calculates some [`SeparatedTextLines`] based on some text lines.
@@ -182,7 +191,10 @@ impl Text {
             .iter()
             .enumerate()
             .map(|(index, line)| {
-                Ok((line.is_newline(index.checked_sub(1).map(|i| &lines[i]), context)?, line))
+                Ok((
+                    line.is_newline(index.checked_sub(1).map(|i| &lines[i]), context)?,
+                    line,
+                ))
             })
             .collect()
     }

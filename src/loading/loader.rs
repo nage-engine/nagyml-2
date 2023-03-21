@@ -161,7 +161,8 @@ impl<'a> Loader<'a> {
     where
         P: AsRef<Utf8Path>,
     {
-        self.read_internal(&path).with_context(|| format!("{} doesn't exist", path.as_ref()))
+        self.read_internal(&path)
+            .with_context(|| format!("{} doesn't exist", path.as_ref()))
     }
 
     /// Reads a file given a path and deserializes it into the specified type.

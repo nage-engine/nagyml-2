@@ -216,7 +216,10 @@ pub struct Choice {
     /// If this ending choice is the only one in a prompt, `response` is optional.
     /// If in this case `response` is [`None`], the prompt will have the [`Ending`](PromptModel::Ending) model.
     pub ending: Option<TextLines>,
-    #[serde(alias = "discord rich presence", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        alias = "discord rich presence",
+        skip_serializing_if = "Option::is_none"
+    )]
     /// A custom detail to show up in Discord Rich Presence after this choice is taken.
     pub drp: Option<TemplatableString>,
 }
@@ -248,8 +251,11 @@ impl Choice {
             }
             Some(jump) => {
                 if jump.is_not_templatable() {
-                    let file =
-                        jump.file.as_ref().map(|t| t.content.clone()).unwrap_or(local_file.clone());
+                    let file = jump
+                        .file
+                        .as_ref()
+                        .map(|t| t.content.clone())
+                        .unwrap_or(local_file.clone());
                     let _ = Prompt::get(prompts, &jump.prompt.content, &file)
                         .with_context(|| "`jump` section points to invalid prompt")?;
                 }
@@ -312,7 +318,11 @@ impl Choice {
                     .invert()?
                     .unwrap_or(config.settings.history.locked),
                 redirect: matches!(model, PromptModel::Redirect(_)),
-                notes: self.notes.as_ref().map(|n| n.to_note_entries(text_context)).invert()?,
+                notes: self
+                    .notes
+                    .as_ref()
+                    .map(|n| n.to_note_entries(text_context))
+                    .invert()?,
                 variables: self.create_variable_entries(input, variables, text_context)?,
                 log: self.log.is_some(),
             })
