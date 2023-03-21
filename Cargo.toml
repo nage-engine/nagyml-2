@@ -34,7 +34,7 @@ crossterm = "0.26.1"
 strum = { version = "0.24.1", features = [ "derive" ] }
 directories = "4.0.1"
 tinytemplate = "1.2.1"
-open = "4.0.0"
+open = "4.0.1"
 sanitize-filename = "0.4.0"
 unicode-truncate = "0.2.0"
 piz = "0.5.1"
