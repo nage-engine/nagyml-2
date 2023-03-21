@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::Result;
+use anyhow::{Result, Context, anyhow};
 use camino::Utf8PathBuf;
 use clap::Parser;
 use requestty::Question;
@@ -88,8 +88,12 @@ impl CliCommand {
 	/// Handles a [`Saves`](CliCommand::Saves) command.
 	fn saves() -> Result<()> {
 		let loader = Loader::current_dir();
-		let config = Manifest::load(&loader)?;
-		let _ = open::that(SaveManager::dir(&config, false)?)?;
+		match Manifest::load(&loader) {
+			Ok(config) => open::that(SaveManager::game_dir(&config)?)
+				.with_context(|| anyhow!("Unable to open game save directory"))?,
+			Err(_) => open::that(SaveManager::generic_dir()?)
+    			.with_context(|| anyhow!("Unable to open global save directory"))?
+		};
 		Ok(())
 	}
 
