@@ -304,7 +304,7 @@ impl Manifest {
     pub const FILE: &'static str = "nage.yml";
 
     pub fn load(loader: &Loader) -> Result<Self> {
-        let config: Self = loader.load(Self::FILE)?;
+        let config: Self = loader.load(Self::FILE, true)?;
         config
             .validate()
             .with_context(|| "Failed to validate manifest")?;

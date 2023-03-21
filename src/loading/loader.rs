@@ -1,12 +1,12 @@
 use std::{collections::BTreeMap, fs::File, io, path::PathBuf};
 
 use anyhow::{anyhow, Context, Result};
-use camino::{Utf8Component, Utf8Path, Utf8PathBuf};
+use camino::{Utf8Path, Utf8PathBuf};
 use directories::ProjectDirs;
 use format_serde_error::SerdeError;
 use memmap::Mmap;
 use piz::{
-    read::{as_tree, DirectoryContents, FileMetadata, FileTree},
+    read::{as_tree, DirectoryContents, FileTree},
     ZipArchive,
 };
 use result::OptionResultExt;
@@ -34,17 +34,18 @@ pub struct Loader<'a> {
 pub struct KeyedPath(String, Utf8PathBuf);
 
 impl KeyedPath {
-    pub fn new<P>(path: Utf8PathBuf, kind: P) -> Self
+    pub fn new<P>(path: Utf8PathBuf, kind: P) -> Option<Self>
     where
         P: AsRef<Utf8Path>,
     {
+        dbg!(&path, kind.as_ref());
         let key = path
             .strip_prefix(kind.as_ref())
-            .unwrap()
+            .ok()?
             .with_extension("")
             .to_string()
             .replace("\\", "/");
-        KeyedPath(key, path)
+        Some(KeyedPath(key, path))
     }
 }
 
@@ -125,12 +126,6 @@ impl<'a> Loader<'a> {
         }
     }
 
-    // Provided by zip reader: game/prompts/abc.yml
-    // Want to read that
-    // Want to parse to prompts/abc
-    // Want to know it's from prompts
-    // At the same time, need nage.yml to be game/nage.yml
-
     /// Parses some [`String`] content into a deserializable type.
     pub fn parse<T>(content: String) -> Result<T>
     where
@@ -141,15 +136,27 @@ impl<'a> Loader<'a> {
         Ok(parsed)
     }
 
-    fn read_internal<P>(&self, path: P) -> Result<String>
+    /// Given a path, reads some target file and outputs its contents.
+    ///
+    /// - For a [`Folder`](Backend::Folder) backend, reads the file using [`std::fs`].
+    /// - For a [`Zip`](Backend::Zip) backend, looks up the archived file in the parsed tree.
+    ///
+    /// If `raw` is `true`, prepends the given path with the relevant directory relative
+    /// to the current location.
+    fn read_internal<P>(&self, path: P, raw: bool) -> Result<String>
     where
         P: AsRef<Utf8Path>,
     {
         use Backend::*;
+        let full = if raw {
+            self.get_path(path)
+        } else {
+            path.as_ref().to_path_buf()
+        };
         let result = match &self.backend {
-            Folder => std::fs::read_to_string(path.as_ref())?,
+            Folder => std::fs::read_to_string(full)?,
             Zip(archive, tree) => {
-                let metadata = tree.lookup(path)?;
+                let metadata = tree.lookup(full)?;
                 let reader = archive.read(&metadata)?;
                 io::read_to_string(reader)?
             }
@@ -157,42 +164,22 @@ impl<'a> Loader<'a> {
         Ok(result)
     }
 
-    pub fn read<P>(&self, path: P) -> Result<String>
+    pub fn read<P>(&self, path: P, raw: bool) -> Result<String>
     where
         P: AsRef<Utf8Path>,
     {
-        self.read_internal(&path)
+        self.read_internal(&path, raw)
             .with_context(|| format!("{} doesn't exist", path.as_ref()))
     }
 
     /// Reads a file given a path and deserializes it into the specified type.
-    pub fn load<P, T>(&self, path: P) -> Result<T>
+    pub fn load<P, T>(&self, path: P, raw: bool) -> Result<T>
     where
         P: AsRef<Utf8Path>,
         T: DeserializeOwned,
     {
-        let content = self.read(&path)?;
+        let content = self.read(&path, raw)?;
         Self::parse(content).with_context(|| format!("Failed to parse {}", path.as_ref()))
-    }
-
-    /// Converts a [`FileMetadata`] reference into a [`KeyedPath`] if it holds the correct content type.
-    /// Errors are ignored but result in a [`None`] value.
-    ///
-    /// All archived content files start with the archive's name.
-    /// It is ideal to be able to read those files from an input that does not begin with that name.
-    /// Therefore, this conversion strips the archive name from the path and allows it to be added on when reading.
-    fn archived_content_file<P>(file: &FileMetadata, kind: P) -> Option<KeyedPath>
-    where
-        P: AsRef<Utf8Path>,
-    {
-        let components: Vec<Utf8Component> = file.path.components().collect();
-        let archive_name = components[0];
-        let kind_comp = components.get(1)?;
-        if kind_comp.as_str() != kind.as_ref() {
-            return None;
-        }
-        let stripped = file.path.strip_prefix(archive_name).ok()?.to_owned();
-        Some(KeyedPath::new(stripped, kind))
     }
 
     /// Iterates over content files, performs the specified operation on the file path,
@@ -212,16 +199,18 @@ impl<'a> Loader<'a> {
                     .filter(|e| e.path().is_file())
                     .filter_map(move |e| {
                         let file_path = Utf8PathBuf::from_path_buf(e.path().to_path_buf()).ok()?;
-                        Some(KeyedPath::new(file_path, &full))
+                        Some(KeyedPath::new(file_path, &full)?)
                     })
                     .map(|KeyedPath(key, path)| Ok((key, mapper(path)?)))
                     .collect()
             }
-            Zip(_, tree) => tree
-                .files()
-                .filter_map(|file| Self::archived_content_file(file, &path))
-                .map(|KeyedPath(key, path)| Ok((key, mapper(path.to_path_buf())?)))
-                .collect(),
+            Zip(_, tree) => {
+                let full = self.get_path(&path);
+                tree.files()
+                    .filter_map(|file| KeyedPath::new(file.path.to_owned().into_owned(), &full))
+                    .map(|KeyedPath(key, path)| Ok((key, mapper(path.to_path_buf())?)))
+                    .collect()
+            }
         }
     }
 
@@ -230,7 +219,7 @@ impl<'a> Loader<'a> {
     where
         P: AsRef<Utf8Path>,
     {
-        self.map_content(path, |local| Ok(self.read(local)?))
+        self.map_content(path, |local| Ok(self.read(local, false)?))
     }
 
     /// Iterates over content files, deserializes their content, and combines them into a [`Contents`] map.
@@ -239,6 +228,6 @@ impl<'a> Loader<'a> {
         P: AsRef<Utf8Path>,
         T: DeserializeOwned,
     {
-        self.map_content(path, |local| Ok(self.load(local)?))
+        self.map_content(path, |local| Ok(self.load(local, false)?))
     }
 }
