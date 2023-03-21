@@ -152,7 +152,7 @@ impl Text {
 
 	/// Whether a newline should be printed before this line.
 	/// Uses the `newline` key, otherwise defaulting to comparing the [`TextMode`] between this and the previous line, if any.
-	fn newline(&self, previous: Option<&Text>, context: &TextContext) -> Result<bool> {
+	fn is_newline(&self, previous: Option<&Text>, context: &TextContext) -> Result<bool> {
 		self.newline.as_ref()
 			.map(|nl| nl.get_value(context))
     		.unwrap_or(previous
@@ -164,7 +164,7 @@ impl Text {
 	/// Calculates some [`SeparatedTextLines`] based on some text lines.
 	fn get_separated_lines<'a>(lines: &'a TextLines, context: &TextContext) -> Result<SeparatedTextLines<'a>> {
 		lines.iter().enumerate()
-    		.map(|(index, line)| Ok((line.newline(index.checked_sub(1).map(|i| &lines[i]), context)?, line)))
+    		.map(|(index, line)| Ok((line.is_newline(index.checked_sub(1).map(|i| &lines[i]), context)?, line)))
     		.collect()
 	}
 
