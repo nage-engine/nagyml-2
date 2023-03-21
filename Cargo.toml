@@ -1,6 +1,6 @@
 [package]
 name = "nage"
-version = "2.3.0-beta.6"
+version = "2.3.0-beta.7"
 edition = "2021"
 authors = [ "acikek" ]
 description = "Not Another Game Engine; command-line text adventure engine"
