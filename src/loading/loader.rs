@@ -38,7 +38,6 @@ impl KeyedPath {
     where
         P: AsRef<Utf8Path>,
     {
-        dbg!(&path, kind.as_ref());
         let key = path
             .strip_prefix(kind.as_ref())
             .ok()?
