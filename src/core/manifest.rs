@@ -165,11 +165,9 @@ impl RichPresence {
     		.state(state)
 	}
 
-	fn set_state(&mut self, settings: &RichPresenceSettings, game_name: &str, latest: &HistoryEntry, drp: &Option<TemplatableString>, log: Option<String>, text_context: &Option<TextContext>) -> Result<()> {
-		if let Some(state) = settings.mode.get_state(latest, drp, log, text_context)? {
-			let details = Self::details(settings, game_name);
-			let _ = self.client.set_activity(Self::activity(Self::icon(settings, game_name), self.start, &details, &state));
-		}
+	fn set_state(&mut self, settings: &RichPresenceSettings, game_name: &str, state: &str) -> Result<()> {
+		let details = Self::details(settings, game_name);
+		let _ = self.client.set_activity(Self::activity(Self::icon(settings, game_name), self.start, &details, &state));
 		Ok(())
 	}
 }
@@ -284,9 +282,9 @@ impl Manifest {
 		RichPresence::new()
 	}
 
-	pub fn set_rich_presence(&self, drpc: &mut Option<RichPresence>, latest: &HistoryEntry, drp: &Option<TemplatableString>, log: Option<String>, text_context: &Option<TextContext>) -> Result<()> {
+	pub fn set_rich_presence(&self, drpc: &mut Option<RichPresence>, state: &str) -> Result<()> {
 		if let Some(client) = drpc {
-			client.set_state(&self.settings.drp, &self.metadata.name, latest, drp, log, text_context)?;
+			client.set_state(&self.settings.drp, &self.metadata.name, state)?;
 		}
 		Ok(())
 	}

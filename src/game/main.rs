@@ -25,7 +25,7 @@ pub fn begin(config: &Manifest, player: &mut Player, saves: &SaveManager, resour
 		first_play_init(config, player, resources)?;
 	}
 
-	config.set_rich_presence(drpc, player.latest_entry()?, &None, None, &None)?;
+	config.set_rich_presence(drpc, &player.latest_entry()?.path.to_string())?;
 	
 	let silent = 'outer: loop {
 		// Text context owns variables to avoid immutable and mutable borrow overlap

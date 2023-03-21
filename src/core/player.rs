@@ -272,7 +272,10 @@ impl Player {
 		if let Some(log) = &log_filled {
 			self.log.push(log.clone());
 		};
-		config.set_rich_presence(drpc, self.latest_entry()?, &choice.drp, log_filled, &text_context)?;
+		if let Some(state) = config.settings.drp.mode.get_state(self.latest_entry()?, &choice.drp, log_filled, &text_context)? {
+			config.set_rich_presence(drpc, &state)?;
+		}
+		
 		Ok(())
 	}
 
