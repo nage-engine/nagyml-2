@@ -51,9 +51,7 @@ impl Audio {
 
     /// Loads and parses [`Sounds`] from the `sounds` directory.
     fn load_sounds(loader: &Loader) -> Result<Sounds> {
-        loader.map_content("sounds", |path| {
-            Song::from_file(path, None).map_err(|err| anyhow!(err))
-        })
+        loader.map_content("sounds", |path| Song::from_file(path, None).map_err(|err| anyhow!(err)))
     }
 
     /// Loads an [`Audio`] container.

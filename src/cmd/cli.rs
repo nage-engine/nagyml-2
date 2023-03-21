@@ -25,11 +25,7 @@ pub enum CliCommand {
         path: Option<Utf8PathBuf>,
         #[arg(short, long, help = "Start a new save file")]
         new: bool,
-        #[arg(
-            short,
-            long,
-            help = "Pick from a list of multiple saves instead of the last used"
-        )]
+        #[arg(short, long, help = "Pick from a list of multiple saves instead of the last used")]
         pick: bool,
     },
     #[command(about = "Create a new Nagame template")]

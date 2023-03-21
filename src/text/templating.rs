@@ -92,9 +92,8 @@ impl TemplatableString {
 
     pub fn fill(&self, context: &TextContext) -> Result<String> {
         let content = self.lang_file_content(context.lang_file);
-        let scripted = Self::template(content, '(', ')', move |var| {
-            context.scripts.get(var, context)
-        })?;
+        let scripted =
+            Self::template(content, '(', ')', move |var| context.scripts.get(var, context))?;
         Self::template(&scripted, '<', '>', move |var| {
             let filled = Self::fill_variable(var, &context.variables, &context).map(|s| s.clone());
             Ok(filled)
@@ -202,10 +201,7 @@ impl<T> TemplatableValue<T> {
                 .parse::<T>()
                 .map_err(|err| anyhow!(err))
                 .with_context(|| {
-                    format!(
-                        "Failed to parse value '{filled}' templated from '{}'",
-                        string.content
-                    )
+                    format!("Failed to parse value '{filled}' templated from '{}'", string.content)
                 })?;
             return Ok(result);
         }

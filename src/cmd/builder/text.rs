@@ -76,9 +76,7 @@ fn get_text_speed(answers: &Answers) -> Option<TextSpeed> {
         let index = answer.as_list_item().unwrap().index;
 
         if index == 1 {
-            Rate(TemplatableValue::value(
-                answers["speed_input"].as_float().unwrap() as f32,
-            ))
+            Rate(TemplatableValue::value(answers["speed_input"].as_float().unwrap() as f32))
         } else {
             let value = TemplatableValue::value(answers["speed_input"].as_int().unwrap() as usize);
             match index {

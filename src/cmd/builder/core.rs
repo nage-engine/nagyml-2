@@ -152,18 +152,10 @@ fn build_note_requirement() -> Result<NoteRequirement> {
 
 pub fn build_note_actions() -> Result<NoteActions> {
     let apply = build_option("Apply notes?", false, || {
-        build_vec(
-            "Add another note application?",
-            false,
-            build_note_application,
-        )
+        build_vec("Add another note application?", false, build_note_application)
     })?;
     let require = build_option("Require notes?", false, || {
-        build_vec(
-            "Add another note requirement?",
-            false,
-            build_note_requirement,
-        )
+        build_vec("Add another note requirement?", false, build_note_requirement)
     })?;
 
     let module = PromptModule::new(vec![

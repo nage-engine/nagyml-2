@@ -191,10 +191,7 @@ impl Text {
             .iter()
             .enumerate()
             .map(|(index, line)| {
-                Ok((
-                    line.is_newline(index.checked_sub(1).map(|i| &lines[i]), context)?,
-                    line,
-                ))
+                Ok((line.is_newline(index.checked_sub(1).map(|i| &lines[i]), context)?, line))
             })
             .collect()
     }

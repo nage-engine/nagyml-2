@@ -78,9 +78,9 @@ impl Prompt {
     pub fn get<'a>(prompts: &'a Prompts, name: &str, file: &str) -> Result<&'a Prompt> {
         Self::get_file(prompts, file)
             .map(|prompt_file| {
-                prompt_file.get(name).ok_or(anyhow!(
-                    "Invalid prompt '{name}'; not found in file '{file}'"
-                ))
+                prompt_file
+                    .get(name)
+                    .ok_or(anyhow!("Invalid prompt '{name}'; not found in file '{file}'"))
             })
             .flatten()
     }

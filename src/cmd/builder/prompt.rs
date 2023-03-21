@@ -56,14 +56,10 @@ fn build_choice_response(model: usize) -> Result<(Option<Text>, Option<Answer>)>
     let result = if model == 0 {
         let text = build_text(false, "Response")?;
         println!();
-        let tag = build_option(
-            "Should a trait tag display next to the response?",
-            false,
-            || {
-                let tag_q = input_builder("Tag trait").build();
-                requestty::prompt_one(tag_q).map_err(|err| anyhow!(err))
-            },
-        )?;
+        let tag = build_option("Should a trait tag display next to the response?", false, || {
+            let tag_q = input_builder("Tag trait").build();
+            requestty::prompt_one(tag_q).map_err(|err| anyhow!(err))
+        })?;
         (Some(text), tag)
     } else {
         (None, None)
@@ -83,11 +79,7 @@ fn build_choice(model: usize) -> Result<Choice> {
     let static_answers = static_choice_answers()?;
     println!();
     let notes = build_option("Add note actions?", false, build_note_actions)?;
-    let variables = build_option(
-        "Apply static variables?",
-        false,
-        build_variable_applications,
-    )?;
+    let variables = build_option("Apply static variables?", false, build_variable_applications)?;
 
     let info_pages: Option<Vec<TemplatableString>> =
         build_option("Unlock info pages?", false, || {
@@ -121,9 +113,7 @@ fn build_choice(model: usize) -> Result<Choice> {
     let jump = if use_jump { Some(build_path()?) } else { None };
 
     let ending = if !use_jump {
-        Some(build_vec("Add another ending text object?", true, || {
-            build_text(true, "Ending")
-        })?)
+        Some(build_vec("Add another ending text object?", true, || build_text(true, "Ending"))?)
     } else {
         None
     };
@@ -160,9 +150,7 @@ fn build_choice(model: usize) -> Result<Choice> {
 
 pub fn build_prompt() -> Result<Prompt> {
     let text_lines = build_option("Should this prompt display text?", true, || {
-        build_vec("Add another prompt text object?", false, || {
-            build_text(true, "Prompt")
-        })
+        build_vec("Add another prompt text object?", false, || build_text(true, "Prompt"))
     })?;
 
     let model_question = Question::select("model")

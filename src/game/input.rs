@@ -37,10 +37,7 @@ pub struct VariableInputResult(pub String, pub String);
 
 impl VariableInputResult {
     pub fn to_variable_entry(&self, variables: &Variables) -> (&String, VariableEntry) {
-        (
-            &self.0,
-            VariableEntry::new(&self.0, self.1.clone(), variables),
-        )
+        (&self.0, VariableEntry::new(&self.0, self.1.clone(), variables))
     }
 }
 
@@ -87,10 +84,9 @@ impl InputController {
                 }
                 Ok(InputResult::Choice(choice))
             }
-            InputContext::Variable(name, _) => Ok(InputResult::Variable(VariableInputResult(
-                name.clone(),
-                line,
-            ))),
+            InputContext::Variable(name, _) => {
+                Ok(InputResult::Variable(VariableInputResult(name.clone(), line)))
+            }
         }
     }
 

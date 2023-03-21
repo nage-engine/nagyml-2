@@ -36,10 +36,7 @@ pub enum RuntimeCommand {
     Prompt,
     #[command(about = "List the currently applied notes", hide = true)]
     Notes,
-    #[command(
-        about = "List the currently applied variable names and their values",
-        hide = true
-    )]
+    #[command(about = "List the currently applied variable names and their values", hide = true)]
     Variables,
 }
 

@@ -47,11 +47,7 @@ impl VariableEntry {
         variables: &Variables,
         text_context: &TextContext,
     ) -> Result<Self> {
-        Ok(VariableEntry::new(
-            name,
-            value.fill(text_context)?,
-            variables,
-        ))
+        Ok(VariableEntry::new(name, value.fill(text_context)?, variables))
     }
 
     pub fn from_map(
