@@ -1,4 +1,9 @@
-use std::{collections::BTreeMap, fs::File, io, path::PathBuf};
+use std::{
+    collections::BTreeMap,
+    fs::File,
+    io::{self, Cursor, Read, Seek},
+    path::PathBuf,
+};
 
 use anyhow::{anyhow, Context, Result};
 use camino::{Utf8Path, Utf8PathBuf};
@@ -9,9 +14,12 @@ use piz::{
     read::{as_tree, DirectoryContents, FileTree},
     ZipArchive,
 };
+use playback_rs::{Hint, Song};
 use result::OptionResultExt;
 use serde::de::DeserializeOwned;
 use walkdir::WalkDir;
+
+use crate::core::audio::Sounds;
 
 /// An ordered map of content container names to values within a single file.
 pub type ContentFile<T> = BTreeMap<String, T>;
@@ -135,6 +143,19 @@ impl<'a> Loader<'a> {
         Ok(parsed)
     }
 
+    fn create_reader<P>(
+        archive: &'a ZipArchive,
+        tree: &DirectoryContents,
+        path: P,
+    ) -> Result<Box<dyn Read + Send + 'a>>
+    where
+        P: AsRef<Utf8Path>,
+    {
+        let metadata = tree.lookup(path)?;
+        let result = archive.read(&metadata)?;
+        Ok(result)
+    }
+
     /// Given a path, reads some target file and outputs its contents.
     ///
     /// - For a [`Folder`](Backend::Folder) backend, reads the file using [`std::fs`].
@@ -155,8 +176,7 @@ impl<'a> Loader<'a> {
         let result = match &self.backend {
             Folder => std::fs::read_to_string(full)?,
             Zip(archive, tree) => {
-                let metadata = tree.lookup(full)?;
-                let reader = archive.read(&metadata)?;
+                let reader = Self::create_reader(archive, tree, full)?;
                 io::read_to_string(reader)?
             }
         };
@@ -228,5 +248,35 @@ impl<'a> Loader<'a> {
         T: DeserializeOwned,
     {
         self.map_content(path, |local| Ok(self.load(local, false)?))
+    }
+
+    fn load_sound_file<P>(&self, path: P) -> Result<Song>
+    where
+        P: AsRef<Utf8Path>,
+    {
+        use Backend::*;
+        let result = match self.backend {
+            Folder => Song::from_file(path.as_ref(), None),
+            Zip(archive, tree) => {
+                let mut hint = Hint::new();
+                if let Some(extension) = path.as_ref().extension() {
+                    hint.with_extension(extension);
+                }
+                let mut reader = Self::create_reader(archive, tree, path)?;
+                let mut cursor = Cursor::new(Vec::new());
+                io::copy(&mut reader, &mut cursor)?;
+                cursor.seek(io::SeekFrom::Start(0))?;
+                Song::new(Box::new(cursor), &hint, None)
+            }
+        };
+        result.map_err(|err| anyhow!(err))
+    }
+
+    /// Loads and parses sounds using [`load_sound_file`].
+    pub fn load_sounds<P>(&self, path: P) -> Result<Sounds>
+    where
+        P: AsRef<Utf8Path>,
+    {
+        self.map_content(path, |local| Ok(self.load_sound_file(local)?))
     }
 }

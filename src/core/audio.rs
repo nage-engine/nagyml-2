@@ -49,11 +49,6 @@ impl Audio {
         })
     }
 
-    /// Loads and parses [`Sounds`] from the `sounds` directory.
-    fn load_sounds(loader: &Loader) -> Result<Sounds> {
-        loader.map_content("sounds", |path| Song::from_file(path, None).map_err(|err| anyhow!(err)))
-    }
-
     /// Loads an [`Audio`] container.
     ///
     /// If [`AudioPlayer`] creation using [`load_players`](Self::load_players) fails, it fails silently
@@ -63,9 +58,11 @@ impl Audio {
     pub fn load(loader: &Loader, config: &Manifest) -> Result<Option<Self>> {
         Self::load_players(config)
             .map(|result| {
-                result
-                    .ok()
-                    .map(|players| Self::load_sounds(loader).map(|sounds| Self { players, sounds }))
+                result.ok().map(|players| {
+                    loader
+                        .load_sounds("sounds")
+                        .map(|sounds| Self { players, sounds })
+                })
             })
             .flatten()
             .invert()
