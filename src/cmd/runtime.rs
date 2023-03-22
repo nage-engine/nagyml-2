@@ -245,7 +245,7 @@ impl RuntimeCommand {
             Log => Self::log(&player)?,
             Sound => Self::sound(player, &resources.audio)?,
             Save => {
-                saves.write(player, None, false)?;
+                saves.write(player)?;
                 Output("Saving... ".to_owned())
             }
             Quit => Submit(GameLoopResult::Shutdown(false)),

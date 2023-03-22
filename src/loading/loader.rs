@@ -2,7 +2,6 @@ use std::{
     collections::BTreeMap,
     fs::File,
     io::{self, Cursor, Read, Seek},
-    path::PathBuf,
 };
 
 use anyhow::{anyhow, Context, Result};
@@ -115,9 +114,11 @@ impl<'a> Loader<'a> {
         }
     }
 
-    pub fn config_dir() -> Result<PathBuf> {
+    pub fn config_dir() -> Result<Utf8PathBuf> {
         ProjectDirs::from("com", "acikek", "nage")
-            .map(|dirs| dirs.config_dir().to_path_buf())
+            .map(|dirs| Utf8PathBuf::from_path_buf(dirs.config_dir().to_path_buf()))
+            .invert()
+            .map_err(|_| anyhow!("Config directory is not valid UTF-8"))?
             .ok_or(anyhow!("Failed to resolve config directory"))
     }
 

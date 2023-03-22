@@ -31,8 +31,8 @@ fn run(path: Utf8PathBuf, pick: bool, new: bool) -> Result<()> {
     let config = Manifest::load(&loader)?;
     let resources = Resources::load(&loader, &config)?;
     // Load player
-    let saves = SaveManager::new(&config)?;
-    let (mut player, save_file) = saves.load(&config, pick, new)?;
+    let saves = SaveManager::new(&config, pick, new)?;
+    let mut player = saves.load(&config)?;
     // Validate loaded resources
     resources.validate()?;
     // Load rich presence
@@ -48,7 +48,7 @@ fn run(path: Utf8PathBuf, pick: bool, new: bool) -> Result<()> {
     }
     // Save player data
     if config.settings.save {
-        saves.write(&player, save_file, new)?;
+        saves.write(&player)?;
     }
 
     Ok(())

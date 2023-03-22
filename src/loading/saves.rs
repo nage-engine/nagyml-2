@@ -1,31 +1,28 @@
-use std::{
-    ffi::OsStr,
-    path::{Path, PathBuf},
-};
-
 use anyhow::{anyhow, Context, Result};
+use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::core::{manifest::Manifest, player::Player};
 
 use super::loader::Loader;
 
 pub struct SaveManager {
-    dir: PathBuf,
+    dir: Utf8PathBuf,
+    pub save_file: Option<Utf8PathBuf>,
 }
 
 impl SaveManager {
-    pub fn generic_dir() -> Result<PathBuf> {
+    pub fn generic_dir() -> Result<Utf8PathBuf> {
         Ok(Loader::config_dir()?.join("games"))
     }
 
-    pub fn game_dir(config: &Manifest) -> Result<PathBuf> {
+    pub fn game_dir(config: &Manifest) -> Result<Utf8PathBuf> {
         let dir = Self::generic_dir()?
             .join(config.metadata.game_id())
             .join("saves");
         Ok(dir)
     }
 
-    fn dir(config: &Manifest) -> Result<PathBuf> {
+    fn dir(config: &Manifest) -> Result<Utf8PathBuf> {
         let dir = Self::game_dir(config)?;
         if !dir.exists() {
             std::fs::create_dir_all(&dir)?;
@@ -33,53 +30,62 @@ impl SaveManager {
         Ok(dir)
     }
 
-    pub fn new(config: &Manifest) -> Result<Self> {
-        let saves = Self {
-            dir: SaveManager::dir(config)?,
+    pub fn new(config: &Manifest, pick: bool, new: bool) -> Result<Self> {
+        let dir = Self::dir(config)?;
+        let saves = Self::saves(&dir)?;
+        let save_file = if new || saves.is_empty() {
+            None
+        } else if pick {
+            Some(Self::choose_save(&saves)?)
+        } else {
+            Self::last_save_file(&dir).ok()
         };
-        Ok(saves)
+        Ok(Self { dir, save_file })
     }
 
-    fn save_name_storage(&self) -> PathBuf {
-        self.dir.join("save.txt")
+    fn save_name_storage<P>(path: P) -> Utf8PathBuf
+    where
+        P: AsRef<Utf8Path>,
+    {
+        path.as_ref().join("save.txt")
     }
 
-    fn last_save_file(&self) -> Result<String> {
-        std::fs::read_to_string(self.save_name_storage()).map_err(|err| anyhow!(err))
+    fn last_save_file<P>(path: P) -> Result<Utf8PathBuf>
+    where
+        P: AsRef<Utf8Path>,
+    {
+        let string = std::fs::read_to_string(Self::save_name_storage(path))?;
+        Ok(Utf8PathBuf::from(string))
     }
 
     fn load_player<P>(&self, file: P) -> Result<Player>
     where
-        P: AsRef<Path>,
+        P: AsRef<Utf8Path>,
     {
         let content = std::fs::read_to_string(self.dir.join(&file))?;
         Loader::parse(content)
-            .with_context(|| anyhow!("Failed to parse save file '{}'", file.as_ref().display()))
+            .with_context(|| anyhow!("Failed to parse save file '{}'", file.as_ref()))
     }
 
-    fn load_last_save(&self) -> Result<(Player, PathBuf)> {
-        let file = self.last_save_file()?;
-        Ok((self.load_player(file.clone())?, PathBuf::from(file)))
-    }
-
-    fn saves(&self) -> Result<Vec<PathBuf>> {
-        let result = std::fs::read_dir(&self.dir)?
+    fn saves<P>(dir: P) -> Result<Vec<Utf8PathBuf>>
+    where
+        P: AsRef<Utf8Path>,
+    {
+        let result = std::fs::read_dir(dir.as_ref())?
             .filter_map(|entry| entry.ok())
-            .map(|entry| entry.path())
-            .filter(|path| {
-                path.extension()
-                    .and_then(OsStr::to_str)
-                    .map(|p| p == "yml")
-                    .unwrap_or(false)
-            })
+            .filter_map(|entry| Utf8PathBuf::from_path_buf(entry.path()).ok())
+            .filter(|path| path.extension().map(|p| p == "yml").unwrap_or(false))
             .collect();
         Ok(result)
     }
 
-    fn choose_save(saves: &Vec<PathBuf>) -> Result<PathBuf> {
-        let save_names: Vec<&str> = saves
+    fn choose_save<P>(saves: &Vec<P>) -> Result<Utf8PathBuf>
+    where
+        P: AsRef<Utf8Path>,
+    {
+        let save_names: Vec<String> = saves
             .iter()
-            .map(|save| save.file_stem().and_then(OsStr::to_str).unwrap())
+            .map(|save| save.as_ref().file_stem().map(ToString::to_string).unwrap())
             .collect();
         let prompt = requestty::Question::select("Choose a save file")
             .choices(save_names)
@@ -88,25 +94,13 @@ impl SaveManager {
 
         println!();
 
-        Ok(saves[choice].clone())
+        Ok(saves[choice].as_ref().to_path_buf())
     }
 
-    pub fn load(
-        &self,
-        config: &Manifest,
-        pick: bool,
-        new: bool,
-    ) -> Result<(Player, Option<PathBuf>)> {
-        let saves = self.saves()?;
-        if new || saves.is_empty() {
-            return Ok((Player::new(config), None));
-        }
-        if pick {
-            let save = Self::choose_save(&saves)?;
-            Ok((self.load_player(&save)?, Some(save)))
-        } else {
-            self.load_last_save()
-                .map(|(player, path)| (player, Some(path)))
+    pub fn load(&self, config: &Manifest) -> Result<Player> {
+        match &self.save_file {
+            Some(save) => self.load_player(save),
+            None => Ok(Player::new(config)),
         }
     }
 
@@ -124,20 +118,22 @@ impl SaveManager {
         Ok(format!("{}.yml", answer.as_string().unwrap()))
     }
 
-    fn write_player(&self, save_file: &PathBuf, player: &Player) {
+    fn write_player<P>(&self, save_file: P, player: &Player)
+    where
+        P: AsRef<Utf8Path>,
+    {
         if let Ok(content) = serde_yaml::to_string(player) {
             let _ = std::fs::write(self.dir.join(&save_file), content);
         }
     }
 
-    pub fn write(&self, player: &Player, save_file: Option<PathBuf>, new: bool) -> Result<()> {
-        let save = if new || save_file.is_none() {
-            PathBuf::from(Self::prompt_new_save_file()?)
-        } else {
-            save_file.unwrap()
+    pub fn write(&self, player: &Player) -> Result<()> {
+        let save = match &self.save_file {
+            Some(value) => value.clone(),
+            None => Utf8PathBuf::from(Self::prompt_new_save_file()?),
         };
         self.write_player(&save, player);
-        let _ = std::fs::write(self.save_name_storage(), save.to_str().unwrap());
+        let _ = std::fs::write(Self::save_name_storage(&self.dir), save.to_string());
         Ok(())
     }
 }
