@@ -247,7 +247,7 @@ impl Choice {
                 }
             }
             Some(jump) => {
-                if jump.is_not_templatable() {
+                if jump.is_validatable() {
                     let file = jump
                         .file
                         .as_ref()
