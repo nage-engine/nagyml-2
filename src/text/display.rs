@@ -138,10 +138,11 @@ pub type Translations = Contents<String>;
 impl Text {
     /// Retrieves text content with [`TemplatableString::fill`] and formats it based on the [`TextMode`].
     pub fn get(&self, context: &TextContext) -> Result<String> {
-        Ok(self
+        let string = self
             .mode
             .get_value(context)?
-            .format(&self.content.fill(context)?))
+            .format(&self.content.fill(context)?);
+        Ok(termimad::inline(&string).to_string())
     }
 
     fn wait(&self, context: &TextContext) -> Result<Option<u64>> {
