@@ -1,3 +1,5 @@
+use std::time::{self, SystemTime};
+
 use anyhow::{anyhow, Context as ContextTrait, Result};
 use rand::{thread_rng, Rng};
 use result::OptionResultExt;
@@ -63,6 +65,18 @@ impl Scripts {
         Ok(())
     }
 
+    /// Adds helpful functions for scripts that don't have access to external libraries.
+    fn add_fns(&self, context: &Context) -> Result<(), rlua::Error> {
+        let time = context.create_function(|_, ()| {
+            let now = SystemTime::now();
+            let since = now
+                .duration_since(time::UNIX_EPOCH)
+                .map_err(rlua::Error::external)?;
+            Ok(since.as_millis())
+        })?;
+        context.globals().set("time", time)
+    }
+
     /// Given a file string, splits it based on the function delimiter character `:`.
     /// If there is no function delimiter, returns only the file name.
     fn file_components(file: &str) -> (&str, Option<&str>) {
@@ -92,6 +106,7 @@ impl Scripts {
             self.lua.context(|lua_ctx| {
                 self.random_seed(&lua_ctx)?;
                 self.add_globals(&lua_ctx, text_context)?;
+                self.add_fns(&lua_ctx)?;
                 let loaded = lua_ctx.load(script);
                 Self::eval(loaded, components.1)
                     .with_context(|| anyhow!("failed to evaluate script component {file}"))
