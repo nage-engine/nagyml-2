@@ -1,4 +1,7 @@
-use std::time::{self, SystemTime};
+use std::{
+    collections::HashMap,
+    time::{self, SystemTime},
+};
 
 use anyhow::{anyhow, Context as ContextTrait, Result};
 use rand::{thread_rng, Rng};
@@ -50,7 +53,13 @@ impl Scripts {
         context: &Context,
         text_context: &TextContext,
     ) -> Result<(), rlua::Error> {
-        let notes_seq = context.create_sequence_from(text_context.notes.clone())?;
+        let note_bools: HashMap<String, bool> = text_context
+            .notes
+            .clone()
+            .into_iter()
+            .map(|note| (note, true))
+            .collect();
+        let notes_seq = context.create_table_from(note_bools)?;
         let vars_table = context.create_table_from(text_context.variables.clone())?;
         context.globals().set("notes", notes_seq)?;
         context.globals().set("variables", vars_table)?;
