@@ -8,7 +8,7 @@ use semver::Version;
 use tinytemplate::TinyTemplate;
 
 use crate::{
-    cmd::builder::prompt::build_prompt,
+    //cmd::builder::prompt::build_prompt,
     core::manifest::Manifest,
     loading::{loader::Loader, saves::SaveManager},
 };
@@ -85,10 +85,11 @@ impl CliCommand {
 
     /// Handles a [`Builder`](CliCommand::Builder) command.
     fn builder() -> Result<()> {
-        let prompt = build_prompt()?;
+        /*let prompt = build_prompt()?;
         let yaml = serde_yaml::to_string(&prompt)?;
         let stripped = yaml.strip_prefix("---").unwrap();
-        println!("{stripped}");
+        println!("{stripped}");*/
+        println!("Temporarily out of service!");
         Ok(())
     }
 
