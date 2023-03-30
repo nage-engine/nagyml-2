@@ -255,8 +255,8 @@ impl Choice {
         if let Some(actions) = &self.notes {
             if let Some(require) = &actions.require {
                 for requirement in require {
-                    if requirement.has.get_value(text_context)?
-                        != notes.contains(&requirement.name.fill(text_context)?)
+                    if requirement.state.get_state(text_context)?
+                        != notes.contains(&requirement.state.name.fill(text_context)?)
                     {
                         return Ok(false);
                     }

@@ -22,9 +22,9 @@ pub struct Path {
     contents: PathContents,
 }
 
-struct PathContentsVisitor;
+struct PathVisitor;
 
-impl<'de> Visitor<'de> for PathContentsVisitor {
+impl<'de> Visitor<'de> for PathVisitor {
     type Value = PathContents;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -62,9 +62,9 @@ impl<'de> Deserialize<'de> for Path {
     where
         D: Deserializer<'de>,
     {
-        let contents = deserializer.deserialize_any(PathContentsVisitor)?;
-        let path = Path { contents };
-        Ok(path)
+        Ok(Self {
+            contents: deserializer.deserialize_any(PathVisitor)?,
+        })
     }
 }
 
