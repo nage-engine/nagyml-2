@@ -119,9 +119,10 @@ pub fn begin(
 }
 
 pub fn crash_context(config: &Manifest) -> String {
-    let contact = config.metadata.contact.as_ref().map(|info| {
-        let strings: Vec<String> = info.iter().map(|value| format!("- {value}")).collect();
-        format!("\n\nContact the developers:\n{}", strings.join("\n"))
-    });
-    format!("The game has crashed; it's not your fault!{}", contact.unwrap_or(String::new()))
+    let contact = config
+        .metadata
+        .contact()
+        .map(|msg| format!("\n\n{msg}"))
+        .unwrap_or(String::new());
+    format!("The game has crashed; it's not your fault!{contact}")
 }

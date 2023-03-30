@@ -38,12 +38,21 @@ pub struct Metadata {
     id: Option<String>,
     pub authors: Vec<String>,
     pub version: Version,
-    pub contact: Option<Vec<String>>,
+    contact: Option<Vec<String>>,
 }
 
 impl Metadata {
     pub fn game_id(&self) -> &str {
         self.id.as_ref().unwrap_or(&self.name)
+    }
+
+    pub fn contact(&self) -> Option<String> {
+        self.contact.as_ref().map(|info| {
+            let contact_lines: Vec<String> =
+                info.iter().map(|value| format!("- {value}")).collect();
+            let joined = contact_lines.join("\n");
+            format!("Contact the developers:\n{joined}")
+        })
     }
 }
 
