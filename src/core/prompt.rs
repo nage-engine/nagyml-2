@@ -13,8 +13,9 @@ use crate::{
 };
 
 use super::{
-    choice::{Choice, Choices, Notes},
+    choice::{Choice, Choices},
     path::PathData,
+    state::Notes,
 };
 
 #[derive(Deserialize, Serialize, Debug)]

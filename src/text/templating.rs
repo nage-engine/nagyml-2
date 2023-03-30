@@ -6,7 +6,7 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::core::choice::Variables;
+use crate::core::state::Variables;
 
 use super::{context::TextContext, display::TranslationFile};
 

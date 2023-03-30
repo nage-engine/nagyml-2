@@ -4,12 +4,12 @@ use clap::Parser;
 use crate::{
     core::{
         audio::Audio,
-        choice::Notes,
         manifest::Manifest,
         path::{PathData, PathLookup},
         player::Player,
         prompt::Prompt as PromptUtil,
         resources::{InfoPages, Resources, UnlockedInfoPages},
+        state::Notes,
     },
     game::gloop::GameLoopResult,
     loading::saves::SaveManager,

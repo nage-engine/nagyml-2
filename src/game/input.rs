@@ -2,10 +2,7 @@ use anyhow::{anyhow, Result};
 use clap::Parser;
 use rustyline::DefaultEditor;
 
-use crate::{
-    cmd::runtime::RuntimeCommand,
-    core::{choice::Variables, player::VariableEntry},
-};
+use crate::cmd::runtime::RuntimeCommand;
 
 #[derive(Debug)]
 pub struct InputController {
@@ -33,18 +30,10 @@ impl InputContext {
     }
 }
 
-pub struct VariableInputResult(pub String, pub String);
-
-impl VariableInputResult {
-    pub fn to_variable_entry(&self, variables: &Variables) -> (&String, VariableEntry) {
-        (&self.0, VariableEntry::new(&self.0, self.1.clone(), variables))
-    }
-}
-
 pub enum InputResult {
     Quit(bool),
     Choice(usize),
-    Variable(VariableInputResult),
+    Variable { name: String, value: String },
     Command(Result<RuntimeCommand>),
 }
 
@@ -56,7 +45,7 @@ impl InputController {
         })
     }
 
-    pub fn parse_command(line: String) -> Result<RuntimeCommand> {
+    fn parse_command(line: String) -> Result<RuntimeCommand> {
         // Split line into command + arguments after '.' starting character
         let args: Vec<String> = line
             .strip_prefix(".")
@@ -84,9 +73,10 @@ impl InputController {
                 }
                 Ok(InputResult::Choice(choice))
             }
-            InputContext::Variable(name, _) => {
-                Ok(InputResult::Variable(VariableInputResult(name.clone(), line)))
-            }
+            InputContext::Variable(name, _) => Ok(InputResult::Variable {
+                name: name.clone(),
+                value: line,
+            }),
         }
     }
 

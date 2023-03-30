@@ -8,85 +8,17 @@ use result::OptionResultExt;
 use serde::{Deserialize, Serialize};
 use unicode_truncate::UnicodeTruncateStr;
 
-use crate::{
-    game::input::VariableInputResult,
-    text::{context::TextContext, templating::TemplatableString},
-};
+use crate::text::context::TextContext;
 
 use super::{
-    choice::{Choice, NoteApplication, Notes, VariableApplications, Variables},
+    choice::Choice,
     discord::RichPresence,
     manifest::Manifest,
     path::PathData,
     prompt::PromptModel,
     resources::{Resources, UnlockedInfoPages},
+    state::{NamedVariableEntry, NoteEntries, Notes, VariableEntries, Variables},
 };
-
-#[derive(Serialize, Deserialize, Debug)]
-/// A single variable value recording.
-pub struct VariableEntry {
-    /// The new variable value.
-    pub value: String,
-    /// The previous variable value if being overriden.
-    pub previous: Option<String>,
-}
-
-/// A map of variable names to value recordings.
-pub type VariableEntries = HashMap<String, VariableEntry>;
-
-impl VariableEntry {
-    pub fn new(name: &String, value: String, variables: &Variables) -> Self {
-        VariableEntry {
-            value: value.clone(),
-            previous: variables.get(name).map(|prev| prev.clone()),
-        }
-    }
-
-    fn from_template(
-        name: &String,
-        value: &TemplatableString,
-        variables: &Variables,
-        text_context: &TextContext,
-    ) -> Result<Self> {
-        Ok(VariableEntry::new(name, value.fill(text_context)?, variables))
-    }
-
-    pub fn from_map(
-        applying: &VariableApplications,
-        globals: &Variables,
-        text_context: &TextContext,
-    ) -> Result<VariableEntries> {
-        applying
-            .iter()
-            .map(|(name, value)| {
-                let entry = VariableEntry::from_template(name, value, globals, text_context);
-                entry.map(|e| (name.clone(), e))
-            })
-            .collect()
-    }
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct NoteEntry {
-    pub value: String,
-    pub take: bool,
-}
-
-pub type NoteEntries = Vec<NoteEntry>;
-
-impl NoteEntry {
-    pub fn new(name: &TemplatableString, take: bool, text_context: &TextContext) -> Result<Self> {
-        let entry = NoteEntry {
-            value: name.fill(text_context)?,
-            take,
-        };
-        Ok(entry)
-    }
-
-    pub fn from_application(app: &NoteApplication, text_context: &TextContext) -> Result<Self> {
-        Self::new(&app.name, app.take.get_value(text_context)?, text_context)
-    }
-}
 
 #[derive(Serialize, Deserialize, Debug)]
 /// A reversible recording of a prompt jump.
@@ -258,7 +190,7 @@ impl Player {
     pub fn choose(
         &mut self,
         choice: &Choice,
-        input: Option<&VariableInputResult>,
+        input: Option<NamedVariableEntry>,
         config: &Manifest,
         model: &PromptModel,
         resources: &Resources,
@@ -330,7 +262,7 @@ impl Player {
     pub fn choose_full(
         &mut self,
         choice: &Choice,
-        input: Option<&VariableInputResult>,
+        input: Option<NamedVariableEntry>,
         config: &Manifest,
         resources: &Resources,
         drpc: &mut Option<RichPresence>,

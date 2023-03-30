@@ -7,3 +7,4 @@ pub mod player;
 pub mod prompt;
 pub mod resources;
 pub mod scripts;
+pub mod state;

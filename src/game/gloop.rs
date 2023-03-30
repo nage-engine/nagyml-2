@@ -5,7 +5,7 @@ use crate::{
     cmd::runtime::{CommandResult, RuntimeCommand},
     core::{
         choice::Choice, discord::RichPresence, manifest::Manifest, player::Player,
-        prompt::PromptModel, resources::Resources,
+        prompt::PromptModel, resources::Resources, state::NamedVariableEntry,
     },
     game::input::{InputContext, InputResult},
     loading::saves::SaveManager,
@@ -95,10 +95,11 @@ pub fn take_input(
             InputResult::Choice(i) => {
                 handle_choice(choices[i - 1], config, player, resources, drpc, model, text_context)?
             }
-            InputResult::Variable(result) => {
+            InputResult::Variable { name, value } => {
                 // Modify variables after the choose call since history entries are sensitive to this order
-                player.choose(choices[0], Some(&result), config, model, resources, text_context)?;
-                player.variables.insert(result.0.clone(), result.1.clone());
+                let entry = NamedVariableEntry::new(name.clone(), value.clone(), &player.variables);
+                player.choose(choices[0], Some(entry), config, model, resources, text_context)?;
+                player.variables.insert(name, value);
                 player.after_choice(choices[0], config, resources, drpc)?;
                 Continue
             }

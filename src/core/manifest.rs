@@ -18,10 +18,11 @@ use crate::{
 };
 
 use super::{
-    choice::{Notes, SoundAction, SoundActionMode, Variables},
+    choice::{SoundAction, SoundActionMode},
     discord::{RichPresence, RichPresenceMode},
     path::PathData,
     resources::UnlockedInfoPages,
+    state::{Notes, Variables},
 };
 
 #[derive(Deserialize, Debug)]

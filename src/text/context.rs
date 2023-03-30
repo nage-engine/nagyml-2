@@ -2,10 +2,10 @@ use rlua::{Context, Table};
 
 use crate::core::{
     audio::Audio,
-    choice::{Notes, Variables},
     manifest::Manifest,
     resources::Resources,
     scripts::Scripts,
+    state::{Notes, Variables},
 };
 
 use super::display::TranslationFile;
