@@ -65,8 +65,9 @@ pub fn begin(
             &player.lang,
             resources,
         );
+
         let entry = player.latest_entry()?;
-        let next_prompt = Prompt::get_from_path(&resources.prompts, &entry.path)?;
+        let next_prompt = Prompt::get(&resources.prompts, &entry.path)?;
         let model = next_prompt.model(&text_context)?;
         let choices = next_prompt.usable_choices(&player.notes, &text_context)?;
 

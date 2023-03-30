@@ -11,7 +11,7 @@ use crate::{
 
 use super::{
     manifest::Manifest,
-    path::Path,
+    path::{Path, PathData, PathLookup},
     player::{HistoryEntry, NoteEntries, NoteEntry, VariableEntries, VariableEntry},
     prompt::{Prompt, PromptModel, Prompts},
 };
@@ -185,7 +185,10 @@ pub struct Choice {
     /// A container to prompt player input to save to a variable.
     /// There can only be one choice in an input prompt. It also has its own prompt model: [`Input`](PromptModel::Input).
     pub input: Option<VariableInput>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        skip_serializing_if = "Option::is_none",
+        //deserialize_with = "crate::core::path::deserialize"
+    )]
     /// The prompt to jump to after the choice is made and state is modified.
     /// Mutually exclusive with `ending`.
     pub jump: Option<Path>,
@@ -247,14 +250,12 @@ impl Choice {
                 }
             }
             Some(jump) => {
-                if jump.is_validatable() {
-                    let file = jump
-                        .file
-                        .as_ref()
-                        .map(|t| t.content.clone())
-                        .unwrap_or(local_file.clone());
-                    let _ = Prompt::get(prompts, &jump.prompt.content, &file)
-                        .with_context(|| "`jump` section points to invalid prompt")?;
+                if let Some(file) = &jump.static_file(local_file) {
+                    let _ = Prompt::get(
+                        prompts,
+                        &PathLookup::new(&file, &jump.prompt().content).into(),
+                    )
+                    .with_context(|| "`jump` section points to invalid prompt")?;
                 }
             }
         }
@@ -390,10 +391,10 @@ impl Choice {
     /// Whether this choice jumps to a specific prompt.
     ///
     /// Returns `true` if the choice has a `jump` path and [`Path::matches`] passes.
-    pub fn has_jump_to(&self, file: &String, other_name: &String, other_file: &String) -> bool {
+    pub fn has_jump_to(&self, current_file: &str, other: &PathData) -> bool {
         match &self.jump {
             None => false,
-            Some(jump) => jump.matches(file, other_name, other_file),
+            Some(jump) => jump.matches(current_file, other),
         }
     }
 }

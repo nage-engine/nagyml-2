@@ -25,7 +25,8 @@ use crate::{
 
 use super::{
     choice::{Notes, SoundAction, SoundActionMode, Variables},
-    player::{HistoryEntry, PathEntry},
+    path::PathData,
+    player::HistoryEntry,
     resources::UnlockedInfoPages,
 };
 
@@ -279,7 +280,7 @@ impl Into<SoundAction> for EntrypointSoundAction {
 #[derive(Deserialize, Debug)]
 #[serde(deny_unknown_fields)]
 pub struct Entrypoint {
-    pub path: PathEntry,
+    pub path: PathData,
     pub background: Option<TextLines>,
     pub notes: Option<Notes>,
     pub variables: Option<Variables>,

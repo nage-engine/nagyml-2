@@ -34,8 +34,14 @@ impl TemplatableString {
         content.contains('(') || content.contains('<')
     }
 
+    /// Whether this [`TemplatableString`] is actually templatable determined by [`is_str_templatable`](TemplatableString::is_str_templatable).
     pub fn is_templatable(&self) -> bool {
         Self::is_str_templatable(&self.content)
+    }
+
+    /// Whether this [`TemplatableString`] can be validated on load. This is `false` if the string is templatable.
+    pub fn is_validatable(&self) -> bool {
+        !self.is_templatable()
     }
 
     /// Fills a templatable string based on the input delimiter characters and a filler function.
@@ -90,6 +96,7 @@ impl TemplatableString {
         context.global_variable(var).or(variables.get(var).cloned())
     }
 
+    /// Fills all templating areas with the proper context values provided by the [`TextContext`].
     pub fn fill(&self, context: &TextContext) -> Result<String> {
         let content = self.lang_file_content(context.lang_file);
         let scripted =
@@ -98,6 +105,12 @@ impl TemplatableString {
             let filled = Self::fill_variable(var, &context.variables, &context).map(|s| s.clone());
             Ok(filled)
         })
+    }
+}
+
+impl PartialEq<String> for TemplatableString {
+    fn eq(&self, other: &String) -> bool {
+        self.content.eq(other)
     }
 }
 

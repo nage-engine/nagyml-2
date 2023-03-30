@@ -1,6 +1,5 @@
 use std::{
     collections::{HashMap, HashSet, VecDeque},
-    fmt::Display,
     vec,
 };
 
@@ -17,6 +16,7 @@ use crate::{
 use super::{
     choice::{Choice, NoteApplication, Notes, VariableApplications, Variables},
     manifest::{Manifest, RichPresence},
+    path::PathData,
     prompt::PromptModel,
     resources::{Resources, UnlockedInfoPages},
 };
@@ -87,23 +87,11 @@ impl NoteEntry {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct PathEntry {
-    pub file: String,
-    pub prompt: String,
-}
-
-impl Display for PathEntry {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}/{}", self.file, self.prompt)
-    }
-}
-
 #[derive(Serialize, Deserialize, Debug)]
 /// A reversible recording of a prompt jump.
 pub struct HistoryEntry {
     /// The prompt path the player jumped to.
-    pub path: PathEntry,
+    pub path: PathData,
     /// Whether the new prompt's introduction text was displayed according to [`Choice::display`].
     pub display: bool,
     /// Whether this history entry can be reversed according to [`Choice::lock`].
@@ -120,7 +108,7 @@ pub struct HistoryEntry {
 
 impl HistoryEntry {
     /// Constructs a player's first history entry based on an entrypoint path.
-    pub fn new(path: &PathEntry) -> Self {
+    pub fn new(path: &PathData) -> Self {
         Self {
             path: path.clone(),
             display: true,

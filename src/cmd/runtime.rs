@@ -6,6 +6,7 @@ use crate::{
         audio::Audio,
         choice::Notes,
         manifest::Manifest,
+        path::{PathData, PathLookup},
         player::Player,
         prompt::Prompt as PromptUtil,
         resources::{InfoPages, Resources, UnlockedInfoPages},
@@ -186,12 +187,12 @@ impl RuntimeCommand {
             .choices(PromptUtil::get_file(&resources.prompts, file)?.keys())
             .build();
         let prompt_choice = requestty::prompt_one(prompt_question)?;
-        let prompt_name = &prompt_choice.as_list_item().unwrap().text;
+        let prompt = &prompt_choice.as_list_item().unwrap().text;
 
-        let prompt = PromptUtil::get(&resources.prompts, prompt_name, file)?;
+        let lookup: PathData = PathLookup::new(file, prompt).into();
+        let prompt = PromptUtil::get(&resources.prompts, &lookup)?;
         Ok(CommandResult::Output(prompt.debug_info(
-            prompt_name,
-            file,
+            &lookup.into(),
             &resources.prompts,
             notes,
             text_context,

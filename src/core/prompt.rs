@@ -14,7 +14,7 @@ use crate::{
 
 use super::{
     choice::{Choice, Choices, Notes},
-    player::PathEntry,
+    path::PathData,
 };
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -75,21 +75,16 @@ impl Prompt {
     }
 
     /// Finds a specific prompt within a [`Prompts`] object.
-    pub fn get<'a>(prompts: &'a Prompts, name: &str, file: &str) -> Result<&'a Prompt> {
-        Self::get_file(prompts, file)
+    pub fn get<'a>(prompts: &'a Prompts, path: &PathData) -> Result<&'a Prompt> {
+        Self::get_file(prompts, &path.file)
             .map(|prompt_file| {
-                prompt_file
-                    .get(name)
-                    .ok_or(anyhow!("Invalid prompt '{name}'; not found in file '{file}'"))
+                prompt_file.get(&path.prompt).ok_or(anyhow!(
+                    "Invalid prompt '{}'; not found in file '{}'",
+                    path.prompt,
+                    path.file
+                ))
             })
             .flatten()
-    }
-
-    /// Uses [`Prompt::get`] to find a specific prompt.
-    ///
-    /// The input path **must** have a `file` key.
-    pub fn get_from_path<'a>(prompts: &'a Prompts, path: &PathEntry) -> Result<&'a Prompt> {
-        Self::get(prompts, &path.prompt, &path.file)
     }
 
     /// Validates this prompt's choices using [`Choice::validate`].
@@ -176,16 +171,11 @@ impl Prompt {
     /// Returns the indices of any of this prompt's choices that jump to another prompt.
     ///
     /// Uses [`Choice::has_jump_to`].
-    pub fn get_jumps_to(
-        &self,
-        file: &String,
-        other_name: &String,
-        other_file: &String,
-    ) -> Vec<usize> {
+    pub fn get_jumps_to(&self, current_file: &str, other: &PathData) -> Vec<usize> {
         self.choices
             .iter()
             .enumerate()
-            .filter(|(_, choice)| choice.has_jump_to(file, other_name, other_file))
+            .filter(|(_, choice)| choice.has_jump_to(current_file, other))
             .map(|(index, _)| index)
             .collect()
     }
@@ -194,8 +184,7 @@ impl Prompt {
     ///
     /// Uses [`Prompt::get_jumps_to`] to find the indices of the choices, if any.
     pub fn external_jumps<'a>(
-        name: &String,
-        file: &String,
+        path: &PathData,
         prompts: &'a Prompts,
     ) -> HashMap<String, Vec<usize>> {
         prompts
@@ -206,7 +195,7 @@ impl Prompt {
                     .map(|(other_prompt_name, other_prompt)| {
                         let id =
                             format!("{}/{}", other_file_name.clone(), other_prompt_name.clone());
-                        (id, other_prompt.get_jumps_to(other_file_name, name, file))
+                        (id, other_prompt.get_jumps_to(other_file_name, path))
                     })
                     .filter(|(_, choices)| !choices.is_empty())
             })
@@ -218,8 +207,7 @@ impl Prompt {
     /// including the ID, type, choices configuration, and other prompts that jump to this one.
     pub fn debug_info(
         &self,
-        name: &String,
-        file: &String,
+        path: &PathData,
         prompts: &Prompts,
         notes: &Notes,
         text_context: &TextContext,
@@ -227,14 +215,14 @@ impl Prompt {
         let model = self.model(text_context)?;
         let choices_amt = self.choices.len();
         let usable_choices = self.usable_choices(notes, text_context)?.len();
-        let external_jumps: Vec<String> = Self::external_jumps(name, file, prompts)
+        let external_jumps: Vec<String> = Self::external_jumps(path, prompts)
             .iter()
             .map(|(other_id, choices)| {
                 let indices: Vec<String> = choices.iter().map(|i| format!("#{}", i + 1)).collect();
                 format!("- {other_id}: {}", indices.join(", "))
             })
             .collect();
-        let id_and_model = format!("ID: {file}/{name}\n{model}");
+        let id_and_model = format!("ID: {}\n{model}", path);
         let choices = format!("{choices_amt} choice(s)\n{usable_choices} of them accessible");
         let jumps = if external_jumps.is_empty() {
             String::new()
