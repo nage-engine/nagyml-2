@@ -15,7 +15,8 @@ use crate::{
 
 use super::{
     choice::{Choice, NoteApplication, Notes, VariableApplications, Variables},
-    manifest::{Manifest, RichPresence},
+    discord::RichPresence,
+    manifest::Manifest,
     path::PathData,
     prompt::PromptModel,
     resources::{Resources, UnlockedInfoPages},
@@ -316,9 +317,9 @@ impl Player {
         };
         if let Some(state) = config.settings.drp.mode.get_state(
             self.latest_entry()?,
-            &choice.drp,
-            log_filled,
-            &text_context,
+            choice.drp.as_ref(),
+            log_filled.as_deref(),
+            text_context.as_ref(),
         )? {
             config.set_rich_presence(drpc, &state)?;
         }

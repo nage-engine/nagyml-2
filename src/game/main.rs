@@ -2,7 +2,8 @@ use anyhow::{anyhow, Result};
 
 use crate::{
     core::{
-        manifest::{Manifest, RichPresence},
+        discord::RichPresence,
+        manifest::Manifest,
         player::Player,
         prompt::{Prompt, PromptModel},
         resources::Resources,

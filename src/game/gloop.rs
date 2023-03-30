@@ -4,11 +4,8 @@ use result::OptionResultExt;
 use crate::{
     cmd::runtime::{CommandResult, RuntimeCommand},
     core::{
-        choice::Choice,
-        manifest::{Manifest, RichPresence},
-        player::Player,
-        prompt::PromptModel,
-        resources::Resources,
+        choice::Choice, discord::RichPresence, manifest::Manifest, player::Player,
+        prompt::PromptModel, resources::Resources,
     },
     game::input::{InputContext, InputResult},
     loading::saves::SaveManager,
