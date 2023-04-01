@@ -7,13 +7,11 @@ main:
   - response:
       text: Wait for him to lunge again
       mode: action
-    jump:
-      prompt: final_choice
+    jump: final_choice
   - response:
       text: Rush towards him with all your might
       mode: action
-    jump:
-      prompt: death
+    jump: death
 
 final_choice:
   prompt:
@@ -26,12 +24,10 @@ final_choice:
   - response:
       text: Spare the shopkeeper
       mode: action
-    jump:
-      file: main
-      prompt: main
+    jump: main/main
     notes:
       apply:
-      - name: spared
+      - spared
   - response:
       text: Let God have mercy on your soul.
       

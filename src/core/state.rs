@@ -3,7 +3,10 @@ use std::collections::{HashMap, HashSet};
 use anyhow::Result;
 use result::OptionResultExt;
 use serde::{
-    de::{value::MapAccessDeserializer, Visitor},
+    de::{
+        value::{MapAccessDeserializer, SeqAccessDeserializer},
+        Visitor,
+    },
     Deserialize, Serialize,
 };
 
@@ -92,24 +95,6 @@ impl Serialize for NoteState {
     }
 }
 
-/// The type of action linked to [`NoteStates`].
-/*pub enum NoteAction {
-    /// Gives or takes notes from the player.
-    Apply,
-    /// Requires that a player has or doesn't have notes.
-    Require,
-}
-
-impl NoteAction {
-    pub fn default_state(&self) -> bool {
-        use NoteAction::*;
-        match self {
-            Apply => false,  // take: false
-            Require => true, // has: true
-        }
-    }
-}*/
-
 impl NoteStateContents {
     pub fn get_state(&self, text_context: &TextContext) -> Result<bool> {
         if let Some(state) = &self.state {
@@ -182,7 +167,7 @@ impl NoteEntry {
     }
 
     pub fn from_application(app: &NoteStateContents, text_context: &TextContext) -> Result<Self> {
-        Self::new(&app.name, app.get_state(text_context)?, text_context)
+        Self::new(&app.name, !app.get_state(text_context)?, text_context)
     }
 }
 
@@ -201,8 +186,109 @@ pub struct VariableInput {
 /// A map of display variables wherein the key is the variable name and the value is the variable's display.
 pub type Variables = HashMap<String, String>;
 
-/// A map of variable names to values to apply to a player statically.
-pub type VariableApplications = HashMap<String, TemplatableString>;
+/// Variable applications whose name values are non-templatable keys.
+pub type StaticVariableApplications = HashMap<String, TemplatableString>;
+
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(deny_unknown_fields)]
+/// A variable application that preserves the key-static value-templatable model.
+pub struct VariableApplicationContents {
+    #[serde(alias = "variable")]
+    /// The name of the variable.
+    name: TemplatableString,
+    /// The value to set variable to.
+    value: TemplatableString,
+}
+
+pub type VariableApplicationsInner = Vec<VariableApplicationContents>;
+
+impl VariableApplicationContents {
+    pub fn from_static(values: StaticVariableApplications) -> VariableApplicationsInner {
+        values
+            .into_iter()
+            .map(|(name, value)| VariableApplicationContents {
+                name: name.into(),
+                value,
+            })
+            .collect()
+    }
+}
+
+pub struct VariableApplicationsVisitor;
+
+impl<'de> Visitor<'de> for VariableApplicationsVisitor {
+    type Value = VariableApplicationsInner;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("map or sequence")
+    }
+
+    fn visit_map<A>(self, map: A) -> std::result::Result<Self::Value, A::Error>
+    where
+        A: serde::de::MapAccess<'de>,
+    {
+        let vars = StaticVariableApplications::deserialize(MapAccessDeserializer::new(map))?;
+        Ok(VariableApplicationContents::from_static(vars))
+    }
+
+    fn visit_seq<A>(self, seq: A) -> std::result::Result<Self::Value, A::Error>
+    where
+        A: serde::de::SeqAccess<'de>,
+    {
+        VariableApplicationsInner::deserialize(SeqAccessDeserializer::new(seq))
+    }
+}
+
+#[derive(Debug)]
+pub struct VariableApplications {
+    pub applications: VariableApplicationsInner,
+}
+
+impl<'de> Deserialize<'de> for VariableApplications {
+    fn deserialize<D>(deserializer: D) -> std::result::Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(Self {
+            applications: deserializer.deserialize_any(VariableApplicationsVisitor)?,
+        })
+    }
+}
+
+impl Serialize for VariableApplications {
+    fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self.into_static() {
+            Some(values) => values.serialize(serializer),
+            None => self.applications.serialize(serializer),
+        }
+    }
+}
+
+impl VariableApplications {
+    fn is_condensable(&self) -> bool {
+        for app in &self.applications {
+            if app.name.is_templatable() {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn into_static(&self) -> Option<StaticVariableApplications> {
+        if !self.is_condensable() {
+            return None;
+        }
+        let result = self
+            .applications
+            .iter()
+            .map(|app| (app.name.content.clone(), app.value.clone()))
+            .collect();
+        Some(result)
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug)]
 /// A single variable value recording.
@@ -230,10 +316,14 @@ impl VariableEntry {
         text_context: &TextContext,
     ) -> Result<VariableEntries> {
         applying
+            .applications
             .iter()
-            .map(|(name, value)| {
-                let named =
-                    NamedVariableEntry::new(name.clone(), value.fill(text_context)?, globals);
+            .map(|app| {
+                let named = NamedVariableEntry::new(
+                    app.name.fill(text_context)?,
+                    app.value.fill(text_context)?,
+                    globals,
+                );
                 Ok(named.into())
             })
             .collect()

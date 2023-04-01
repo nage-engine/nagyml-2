@@ -10,7 +10,7 @@ use crate::core::state::Variables;
 
 use super::{context::TextContext, display::TranslationFile};
 
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(transparent)]
 /// A string that is able to undergo transformations based on templating variables or custom scripts
 /// or via translation file matching.
