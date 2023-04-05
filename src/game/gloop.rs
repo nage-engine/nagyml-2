@@ -4,12 +4,16 @@ use result::OptionResultExt;
 use crate::{
     cmd::runtime::{CommandResult, RuntimeCommand},
     core::{
-        choice::Choice, discord::RichPresence, manifest::Manifest, player::Player,
-        prompt::PromptModel, resources::Resources, state::NamedVariableEntry,
+        choice::Choice,
+        context::{StaticContext, TextContext},
+        discord::RichPresence,
+        player::Player,
+        prompt::PromptModel,
+        state::NamedVariableEntry,
     },
     game::input::{InputContext, InputResult},
     loading::saves::SaveManager,
-    text::{context::TextContext, display::Text},
+    text::display::Text,
 };
 
 use super::input::InputController;
@@ -32,15 +36,14 @@ pub fn handle_quit(shutdown: bool) -> GameLoopResult {
 
 pub fn handle_choice(
     choice: &Choice,
-    config: &Manifest,
     player: &mut Player,
-    resources: &Resources,
     drpc: &mut Option<RichPresence>,
     model: &PromptModel,
+    stc: &StaticContext,
     text_context: &TextContext,
 ) -> Result<GameLoopResult> {
     use GameLoopResult::*;
-    player.choose_full(choice, None, config, resources, drpc, model, text_context)?;
+    player.choose_full(choice, None, drpc, model, stc, text_context)?;
     if let Some(ending) = &choice.ending {
         println!();
         Text::print_lines(ending, text_context)?;
@@ -51,16 +54,15 @@ pub fn handle_choice(
 
 pub fn handle_command(
     parse: Result<RuntimeCommand>,
-    config: &Manifest,
     player: &mut Player,
     saves: &SaveManager,
-    resources: &Resources,
+    stc: &StaticContext,
     text_context: &TextContext,
 ) -> Result<GameLoopResult> {
     match &parse {
         Err(err) => println!("\n{err}"), // Clap error
         Ok(command) => {
-            match command.run(config, player, saves, resources, text_context) {
+            match command.run(player, saves, stc, text_context) {
                 Err(err) => println!("Error: {err}"), // Command runtime error
                 Ok(result) => match result {
                     CommandResult::Submit(loop_result) => return Ok(loop_result),
@@ -75,14 +77,13 @@ pub fn handle_command(
 pub fn take_input(
     input: &mut InputController,
     context: &InputContext,
-    config: &Manifest,
     player: &mut Player,
     saves: &SaveManager,
-    resources: &Resources,
     drpc: &mut Option<RichPresence>,
     model: &PromptModel,
-    text_context: &TextContext,
     choices: &Vec<&Choice>,
+    stc: &StaticContext,
+    text_context: &TextContext,
 ) -> Result<GameLoopResult> {
     use GameLoopResult::*;
     let result = match input.take(context) {
@@ -93,19 +94,17 @@ pub fn take_input(
         Ok(result) => match result {
             InputResult::Quit(shutdown) => handle_quit(shutdown),
             InputResult::Choice(i) => {
-                handle_choice(choices[i - 1], config, player, resources, drpc, model, text_context)?
+                handle_choice(choices[i - 1], player, drpc, model, stc, text_context)?
             }
             InputResult::Variable { name, value } => {
                 // Modify variables after the choose call since history entries are sensitive to this order
                 let entry = NamedVariableEntry::new(name.clone(), value.clone(), &player.variables);
-                player.choose(choices[0], Some(entry), config, model, resources, text_context)?;
+                player.choose(choices[0], Some(entry), model, stc, text_context)?;
                 player.variables.insert(name, value);
-                player.after_choice(choices[0], config, resources, drpc)?;
+                player.after_choice(choices[0], stc, drpc)?;
                 Continue
             }
-            InputResult::Command(parse) => {
-                handle_command(parse, config, player, saves, resources, text_context)?
-            }
+            InputResult::Command(parse) => handle_command(parse, player, saves, stc, text_context)?,
         },
     };
     Ok(result)

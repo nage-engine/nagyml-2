@@ -1,13 +1,12 @@
 use std::collections::HashMap;
 
 use crate::text::{
-    context::TextContext,
     display::{Text, TextLines},
     templating::{TemplatableString, TemplatableValue},
 };
 
 use super::{
-    manifest::Manifest,
+    context::{StaticContext, TextContext},
     path::{Path, PathData, PathLookup},
     player::HistoryEntry,
     prompt::{Prompt, PromptModel, Prompts},
@@ -219,9 +218,9 @@ impl Choice {
         &self,
         latest: &HistoryEntry,
         input: Option<NamedVariableEntry>,
-        config: &Manifest,
         variables: &Variables,
         model: &PromptModel,
+        stc: &StaticContext,
         text_context: &TextContext,
     ) -> Option<Result<HistoryEntry>> {
         self.jump.as_ref().map(|jump| {
@@ -233,7 +232,7 @@ impl Choice {
                     .as_ref()
                     .map(|lock| lock.get_value(text_context))
                     .invert()?
-                    .unwrap_or(config.settings.history.locked),
+                    .unwrap_or(stc.config.settings.history.locked),
                 redirect: matches!(model, PromptModel::Redirect(_)),
                 notes: self
                     .notes

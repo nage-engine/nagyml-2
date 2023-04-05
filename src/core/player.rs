@@ -8,15 +8,14 @@ use result::OptionResultExt;
 use serde::{Deserialize, Serialize};
 use unicode_truncate::UnicodeTruncateStr;
 
-use crate::text::context::TextContext;
-
 use super::{
     choice::Choice,
+    context::{StaticContext, TextContext},
     discord::RichPresence,
     manifest::Manifest,
     path::PathData,
     prompt::PromptModel,
-    resources::{Resources, UnlockedInfoPages},
+    resources::UnlockedInfoPages,
     state::{NamedVariableEntry, NoteEntries, Notes, VariableEntries, Variables},
 };
 
@@ -81,12 +80,8 @@ impl Player {
         let entry = HistoryEntry::new(&config.entry.path);
         Self {
             began: false,
-            lang: config
-                .settings
-                .lang
-                .clone()
-                .unwrap_or(String::from("en_us")),
-            channels: config.settings.enabled_channels(),
+            lang: config.settings.text.lang(),
+            channels: config.settings.enabled_audio_channels(),
             notes: config.entry.notes.clone().unwrap_or(HashSet::new()),
             variables: config.entry.variables.clone().unwrap_or(HashMap::new()),
             info_pages: config.entry.info_pages.clone().unwrap_or(HashSet::new()),
@@ -191,23 +186,22 @@ impl Player {
         &mut self,
         choice: &Choice,
         input: Option<NamedVariableEntry>,
-        config: &Manifest,
         model: &PromptModel,
-        resources: &Resources,
+        stc: &StaticContext,
         text_context: &TextContext,
     ) -> Result<()> {
         let latest = self.latest_entry()?;
         if let Some(result) =
-            choice.to_history_entry(&latest, input, config, &self.variables, model, text_context)
+            choice.to_history_entry(&latest, input, &self.variables, model, stc, text_context)
         {
             let entry = result?;
             self.apply_entry(&entry, choice, text_context)?;
             self.history.push_back(entry);
-            if self.history.len() > config.settings.history.size {
+            if self.history.len() > stc.config.settings.history.size {
                 self.history.pop_front();
             }
         }
-        if let Some(audio) = &resources.audio {
+        if let Some(audio) = &stc.resources.audio {
             if let Some(sounds) = &choice.sounds {
                 for sound in sounds {
                     audio.accept(&self, sound, text_context)?;
@@ -220,8 +214,7 @@ impl Player {
     pub fn after_choice(
         &mut self,
         choice: &Choice,
-        config: &Manifest,
-        resources: &Resources,
+        stc: &StaticContext,
         drpc: &mut Option<RichPresence>,
     ) -> Result<()> {
         //use RichP
@@ -229,11 +222,10 @@ impl Player {
         // Log page names are not stored in history entries, just whether they were given, so we can fill the name here
         let text_context = if choice.log.is_some() || choice.drp.is_some() {
             Some(TextContext::new(
-                config,
+                stc,
+                self.lang.clone(),
                 self.notes.clone(),
                 self.variables.clone(),
-                &self.lang,
-                resources,
             ))
         } else {
             None
@@ -247,13 +239,13 @@ impl Player {
         if let Some(log) = &log_filled {
             self.log.push(log.clone());
         };
-        if let Some(state) = config.settings.drp.mode.get_state(
+        if let Some(state) = stc.config.rich_presence_state(
             self.latest_entry()?,
             choice.drp.as_ref(),
             log_filled.as_deref(),
             text_context.as_ref(),
         )? {
-            config.set_rich_presence(drpc, &state)?;
+            stc.config.set_rich_presence(drpc, &state)?;
         }
 
         Ok(())
@@ -263,14 +255,13 @@ impl Player {
         &mut self,
         choice: &Choice,
         input: Option<NamedVariableEntry>,
-        config: &Manifest,
-        resources: &Resources,
         drpc: &mut Option<RichPresence>,
         model: &PromptModel,
+        stc: &StaticContext,
         text_context: &TextContext,
     ) -> Result<()> {
-        self.choose(choice, input, config, model, resources, text_context)?;
-        self.after_choice(choice, config, resources, drpc)
+        self.choose(choice, input, model, stc, text_context)?;
+        self.after_choice(choice, stc, drpc)
     }
 
     /// Returns the player's log entries split into readable chunks of five entries maximum.

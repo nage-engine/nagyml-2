@@ -6,7 +6,6 @@ use serde::{Deserialize, Serialize};
 use crate::{
     loading::loader::{ContentFile, Contents},
     text::{
-        context::TextContext,
         display::{Text, TextLines},
         templating::TemplatableString,
     },
@@ -14,6 +13,7 @@ use crate::{
 
 use super::{
     choice::{Choice, Choices},
+    context::TextContext,
     path::PathData,
     state::Notes,
 };

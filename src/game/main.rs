@@ -2,14 +2,15 @@ use anyhow::{anyhow, Result};
 
 use crate::{
     core::{
+        context::{StaticContext, TextContext},
         discord::RichPresence,
         manifest::Manifest,
         player::Player,
         prompt::{Prompt, PromptModel},
-        resources::Resources,
     },
     loading::saves::SaveManager,
-    text::{context::TextContext, display::Text},
+    text::display::Text,
+    text_context,
 };
 
 use super::{
@@ -17,58 +18,39 @@ use super::{
     input::InputController,
 };
 
-pub fn first_play_init(
-    config: &Manifest,
-    player: &mut Player,
-    resources: &Resources,
-) -> Result<()> {
-    let text_context = TextContext::new(
-        config,
-        player.notes.clone(),
-        player.variables.clone(),
-        &player.lang,
-        resources,
-    );
-    if let Some(background) = &config.entry.background {
+pub fn first_play_init(stc: &StaticContext, player: &mut Player) -> Result<()> {
+    let text_context = text_context!(stc, player);
+    if let Some(background) = &stc.config.entry.background {
         Text::print_lines_nl(background, &text_context)?;
     }
-    if let Some(audio) = &resources.audio {
-        if let Some(sounds) = config.entry.sounds.clone() {
-            for sound in sounds {
-                audio.accept(player, &sound.into(), &text_context)?;
-            }
-        }
+    if let Some(audio) = &text_context.resources().audio {
+        stc.config
+            .entry
+            .submit_sounds(&audio, player, &text_context)?;
     }
     player.began = true;
     Ok(())
 }
 
 pub fn begin(
-    config: &Manifest,
+    stc: &StaticContext,
     player: &mut Player,
     saves: &SaveManager,
-    resources: &Resources,
     drpc: &mut Option<RichPresence>,
     input: &mut InputController,
 ) -> Result<bool> {
     if !player.began {
-        first_play_init(config, player, resources)?;
+        first_play_init(stc, player)?;
     }
 
-    config.set_rich_presence(drpc, &player.latest_entry()?.path.to_string())?;
+    stc.config
+        .set_rich_presence(drpc, &player.latest_entry()?.path.to_string())?;
 
     let silent = 'outer: loop {
         // Text context owns variables to avoid immutable and mutable borrow overlap
-        let text_context = TextContext::new(
-            config,
-            player.notes.clone(),
-            player.variables.clone(),
-            &player.lang,
-            resources,
-        );
-
+        let text_context = text_context!(stc, player);
         let entry = player.latest_entry()?;
-        let next_prompt = Prompt::get(&resources.prompts, &entry.path)?;
+        let next_prompt = Prompt::get(&stc.resources.prompts, &entry.path)?;
         let model = next_prompt.model(&text_context)?;
         let choices = next_prompt.usable_choices(&player.notes, &text_context)?;
 
@@ -80,7 +62,7 @@ pub fn begin(
 
         match model {
             PromptModel::Redirect(choice) => {
-                player.choose_full(choice, None, config, resources, drpc, &model, &text_context)?
+                player.choose_full(choice, None, drpc, &model, stc, &text_context)?
             }
             PromptModel::Ending(lines) => {
                 Text::print_lines(lines, &text_context)?;
@@ -93,14 +75,13 @@ pub fn begin(
                 match take_input(
                     input,
                     &context,
-                    config,
                     player,
                     saves,
-                    resources,
                     drpc,
                     &model,
-                    &text_context,
                     &choices,
+                    stc,
+                    &text_context,
                 )? {
                     GameLoopResult::Retry(flush) => {
                         if flush {
@@ -122,7 +103,7 @@ pub fn begin(
 pub fn crash_context(config: &Manifest) -> String {
     let contact = config
         .metadata
-        .contact()
+        .game_contact()
         .map(|msg| format!("\n\n{msg}"))
         .unwrap_or(String::new());
     format!("The game has crashed; it's not your fault!{contact}")

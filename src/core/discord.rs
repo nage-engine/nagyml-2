@@ -8,9 +8,9 @@ use discord_rich_presence::{
 use result::OptionResultExt;
 use serde::Deserialize;
 
-use crate::text::{context::TextContext, templating::TemplatableString};
+use crate::text::templating::TemplatableString;
 
-use super::{manifest::RichPresenceSettings, player::HistoryEntry};
+use super::{context::TextContext, manifest::RichPresenceSettings, player::HistoryEntry};
 
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "snake_case")]

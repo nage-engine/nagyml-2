@@ -7,7 +7,9 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::text::{context::TextContext, templating::TemplatableString};
+use crate::text::templating::TemplatableString;
+
+use super::context::TextContext;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct PathContents {

@@ -1,7 +1,7 @@
 #![feature(result_flattening)]
 #![feature(iterator_try_collect)]
 
-use crate::core::{manifest::Manifest, resources::Resources};
+use crate::core::{context::StaticContext, manifest::Manifest, resources::Resources};
 
 use anyhow::{Context, Result};
 use camino::Utf8PathBuf;
@@ -40,7 +40,8 @@ fn run(path: Utf8PathBuf, pick: bool, new: bool) -> Result<()> {
     // Create input controller
     let mut input = InputController::new()?;
     // Begin game loop
-    let silent = begin(&config, &mut player, &saves, &resources, &mut drpc, &mut input)
+    let stc = StaticContext::new(&config, &resources);
+    let silent = begin(&stc, &mut player, &saves, &mut drpc, &mut input)
         .with_context(|| crash_context(&config))?;
     // Shut down game with silence based on game loop result
     if !silent {

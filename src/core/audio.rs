@@ -8,10 +8,11 @@ use playback_rs::{Player as AudioPlayer, Song};
 use result::OptionResultExt;
 use rlua::{Context, Table};
 
-use crate::{loading::loader::Loader, text::context::TextContext};
+use crate::loading::loader::Loader;
 
 use super::{
     choice::{SoundAction, SoundActionMode},
+    context::TextContext,
     manifest::Manifest,
     player::Player,
 };

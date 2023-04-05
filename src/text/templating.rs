@@ -6,9 +6,9 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::core::state::Variables;
+use crate::core::{context::TextContext, state::Variables};
 
-use super::{context::TextContext, display::TranslationFile};
+use super::display::TranslationFile;
 
 #[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(transparent)]
@@ -98,9 +98,10 @@ impl TemplatableString {
 
     /// Fills all templating areas with the proper context values provided by the [`TextContext`].
     pub fn fill(&self, context: &TextContext) -> Result<String> {
-        let content = self.lang_file_content(context.lang_file);
-        let scripted =
-            Self::template(content, '(', ')', move |var| context.scripts.get(var, context))?;
+        let content = self.lang_file_content(context.lang_file());
+        let scripted = Self::template(content, '(', ')', move |var| {
+            context.resources().scripts.get(var, context)
+        })?;
         Self::template(&scripted, '<', '>', move |var| {
             let filled = Self::fill_variable(var, &context.variables, &context).map(|s| s.clone());
             Ok(filled)

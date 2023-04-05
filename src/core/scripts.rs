@@ -8,10 +8,9 @@ use rand::{thread_rng, Rng};
 use result::OptionResultExt;
 use rlua::{Chunk, Context, Function, Lua, Table};
 
-use crate::{
-    loading::loader::{Loader, RawContents},
-    text::context::TextContext,
-};
+use crate::loading::loader::{Loader, RawContents};
+
+use super::context::TextContext;
 
 #[derive(Debug)]
 /// A container for script files and script running context.
@@ -66,7 +65,7 @@ impl Scripts {
         context
             .globals()
             .set("nage", text_context.create_variable_table(context)?)?;
-        if let Some(audio) = text_context.audio {
+        if let Some(audio) = &text_context.resources().audio {
             context
                 .globals()
                 .set("audio", audio.create_audio_table(context)?)?;

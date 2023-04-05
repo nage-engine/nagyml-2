@@ -12,15 +12,18 @@ use crate::{
     loading::loader::Loader,
     text::{
         display::{TextLines, TextSpeed},
-        templating::TemplatableValue,
+        templating::{TemplatableString, TemplatableValue},
     },
     NAGE_VERSION,
 };
 
 use super::{
+    audio::Audio,
     choice::{SoundAction, SoundActionMode},
+    context::TextContext,
     discord::{RichPresence, RichPresenceMode},
     path::PathData,
+    player::{HistoryEntry, Player},
     resources::UnlockedInfoPages,
     state::{Notes, Variables},
 };
@@ -33,6 +36,7 @@ pub struct Metadata {
     id: Option<String>,
     pub authors: Vec<String>,
     pub version: Version,
+    #[serde(alias = "contact lines")]
     contact: Option<Vec<String>>,
 }
 
@@ -41,7 +45,7 @@ impl Metadata {
         self.id.as_ref().unwrap_or(&self.name)
     }
 
-    pub fn contact(&self) -> Option<String> {
+    pub fn game_contact(&self) -> Option<String> {
         self.contact.as_ref().map(|info| {
             let contact_lines: Vec<String> =
                 info.iter().map(|value| format!("- {value}")).collect();
@@ -64,7 +68,7 @@ impl Default for Dependencies {
 }
 
 impl Dependencies {
-    pub fn check(&self, nage_version: Version) -> Result<()> {
+    fn check(&self, nage_version: Version) -> Result<()> {
         self.nage
             .as_ref()
             .map(|nage| {
@@ -84,7 +88,9 @@ impl Dependencies {
 #[derive(Deserialize, Debug)]
 #[serde(default, deny_unknown_fields)]
 pub struct HistorySettings {
+    #[serde(alias = "locked by default")]
     pub locked: bool,
+    #[serde(alias = "max size", alias = "max entries")]
     pub size: usize,
 }
 
@@ -94,6 +100,33 @@ impl Default for HistorySettings {
             locked: false,
             size: 5,
         }
+    }
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(default, deny_unknown_fields)]
+pub struct TextSettings {
+    pub speed: TextSpeed,
+    pub wait: Option<u64>,
+    #[serde(alias = "language")]
+    lang: Option<String>,
+}
+
+impl Default for TextSettings {
+    fn default() -> Self {
+        Self {
+            speed: TextSpeed::Delay(TemplatableValue::value(5)),
+            wait: None,
+            lang: None,
+        }
+    }
+}
+
+impl TextSettings {
+    pub const DEFAULT_LANG: &'static str = "en_us";
+
+    pub fn lang(&self) -> String {
+        self.lang.clone().unwrap_or(Self::DEFAULT_LANG.to_owned())
     }
 }
 
@@ -122,15 +155,16 @@ impl RichPresenceSettings {
 #[derive(Deserialize, Debug)]
 #[serde(default, deny_unknown_fields)]
 pub struct Settings {
+    #[serde(alias = "save on quit")]
     pub save: bool,
+    #[serde(alias = "developer mode")]
     pub debug: bool,
-    pub speed: TextSpeed,
-    pub wait: Option<u64>,
-    pub lang: Option<String>,
+    #[serde(alias = "sound channels", alias = "audio")]
     pub channels: Option<HashMap<String, bool>>,
     pub history: HistorySettings,
+    pub text: TextSettings,
     #[serde(alias = "discord rich presence")]
-    pub drp: RichPresenceSettings,
+    drp: RichPresenceSettings,
 }
 
 impl Default for Settings {
@@ -138,18 +172,16 @@ impl Default for Settings {
         Self {
             save: true,
             debug: false,
-            speed: TextSpeed::Delay(TemplatableValue::value(5)),
-            wait: None,
-            lang: None,
             channels: None,
             history: HistorySettings::default(),
+            text: TextSettings::default(),
             drp: RichPresenceSettings::default(),
         }
     }
 }
 
 impl Settings {
-    pub fn enabled_channels(&self) -> HashSet<String> {
+    pub fn enabled_audio_channels(&self) -> HashSet<String> {
         self.channels
             .as_ref()
             .map(|map| {
@@ -192,7 +224,23 @@ pub struct Entrypoint {
     #[serde(rename = "info")]
     pub info_pages: Option<UnlockedInfoPages>,
     pub log: Option<Vec<String>>,
-    pub sounds: Option<Vec<EntrypointSoundAction>>,
+    sounds: Option<Vec<EntrypointSoundAction>>,
+}
+
+impl Entrypoint {
+    pub fn submit_sounds(
+        &self,
+        audio: &Audio,
+        player: &Player,
+        text_context: &TextContext,
+    ) -> Result<()> {
+        if let Some(sounds) = self.sounds.clone() {
+            for sound in sounds {
+                audio.accept(player, &sound.into(), &text_context)?;
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(Deserialize, Debug)]
@@ -200,9 +248,10 @@ pub struct Entrypoint {
 pub struct Manifest {
     pub metadata: Metadata,
     #[serde(default)]
-    pub dependencies: Dependencies,
-    #[serde(default)]
+    dependencies: Dependencies,
+    #[serde(default, alias = "config")]
     pub settings: Settings,
+    #[serde(alias = "entrypoint")]
     pub entry: Entrypoint,
 }
 
@@ -231,6 +280,19 @@ impl Manifest {
             return None;
         }
         RichPresence::new()
+    }
+
+    pub fn rich_presence_state(
+        &self,
+        latest: &HistoryEntry,
+        drp: Option<&TemplatableString>,
+        log: Option<&str>,
+        text_context: Option<&TextContext>,
+    ) -> Result<Option<String>> {
+        self.settings
+            .drp
+            .mode
+            .get_state(latest, drp, log, text_context)
     }
 
     pub fn set_rich_presence(&self, drpc: &mut Option<RichPresence>, state: &str) -> Result<()> {

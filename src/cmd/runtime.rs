@@ -4,7 +4,7 @@ use clap::Parser;
 use crate::{
     core::{
         audio::Audio,
-        manifest::Manifest,
+        context::{StaticContext, TextContext},
         path::{PathData, PathLookup},
         player::Player,
         prompt::Prompt as PromptUtil,
@@ -13,7 +13,7 @@ use crate::{
     },
     game::gloop::GameLoopResult,
     loading::saves::SaveManager,
-    text::{context::TextContext, display::Translations},
+    text::display::Translations,
 };
 
 #[derive(Parser, Debug, PartialEq)]
@@ -228,29 +228,28 @@ impl RuntimeCommand {
     /// Any errors will be reported to the input loop with a retry following.
     pub fn run(
         &self,
-        config: &Manifest,
         player: &mut Player,
         saves: &SaveManager,
-        resources: &Resources,
+        stc: &StaticContext,
         text_context: &TextContext,
     ) -> Result<CommandResult> {
-        if !self.is_normal() && !config.settings.debug {
+        if !self.is_normal() && !stc.config.settings.debug {
             return Err(anyhow!("Unable to access debug commands"));
         }
         use CommandResult::*;
         use RuntimeCommand::*;
         let result = match self {
             Back => Self::back(player)?,
-            Lang => Self::lang(player, &resources.translations)?,
-            Info => Self::info(&player.info_pages, &resources.info_pages)?,
+            Lang => Self::lang(player, &stc.resources.translations)?,
+            Info => Self::info(&player.info_pages, &stc.resources.info_pages)?,
             Log => Self::log(&player)?,
-            Sound => Self::sound(player, &resources.audio)?,
+            Sound => Self::sound(player, &stc.resources.audio)?,
             Save => {
                 saves.write(player)?;
                 Output("Saving... ".to_owned())
             }
             Quit => Submit(GameLoopResult::Shutdown(false)),
-            Prompt => Self::prompt(&player.notes, resources, text_context)?,
+            Prompt => Self::prompt(&player.notes, stc.resources, text_context)?,
             Notes => Self::notes(player)?,
             Variables => Self::variables(player)?,
         };

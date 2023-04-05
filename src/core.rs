@@ -1,5 +1,6 @@
 pub mod audio;
 pub mod choice;
+pub mod context;
 pub mod discord;
 pub mod manifest;
 pub mod path;

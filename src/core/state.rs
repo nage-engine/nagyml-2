@@ -10,10 +10,9 @@ use serde::{
     Deserialize, Serialize,
 };
 
-use crate::text::{
-    context::TextContext,
-    templating::{TemplatableString, TemplatableValue},
-};
+use crate::text::templating::{TemplatableString, TemplatableValue};
+
+use super::context::TextContext;
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]
