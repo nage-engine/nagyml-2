@@ -8,6 +8,8 @@ use result::OptionResultExt;
 use serde::{Deserialize, Serialize};
 use unicode_truncate::UnicodeTruncateStr;
 
+use crate::text_context;
+
 use super::{
     choice::Choice,
     context::{StaticContext, TextContext},
@@ -217,16 +219,10 @@ impl Player {
         stc: &StaticContext,
         drpc: &mut Option<RichPresence>,
     ) -> Result<()> {
-        //use RichP
         // Create a new text context using the new variable and note values for the logs
         // Log page names are not stored in history entries, just whether they were given, so we can fill the name here
         let text_context = if choice.log.is_some() || choice.drp.is_some() {
-            Some(TextContext::new(
-                stc,
-                self.lang.clone(),
-                self.notes.clone(),
-                self.variables.clone(),
-            ))
+            Some(text_context!(stc, self))
         } else {
             None
         };
