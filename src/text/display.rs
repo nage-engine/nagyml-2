@@ -6,12 +6,12 @@ use std::{
 use anyhow::Result;
 use crossterm::style::Stylize;
 use result::OptionResultExt;
-use serde::{Deserialize, Serialize};
+use serde::{de, Deserialize, Deserializer, Serialize};
 use snailshell::{snailprint_d, snailprint_s};
 use strum::{Display, EnumIter, EnumString};
 
 use crate::{
-    core::context::TextContext,
+    core::{audio::SoundActions, context::TextContext},
     loading::loader::{ContentFile, Contents},
 };
 
@@ -125,12 +125,33 @@ pub struct Text {
     #[serde(skip_serializing_if = "Option::is_none")]
     /// How long, in milliseconds, to wait aftet the text is printed.
     pub wait: Option<TemplatableValue<u64>>,
+    /// Ordered sound actions to submit to the game's [`Audio`] resource as this text is displayed.
+    pub sounds: Option<SoundActions>,
 }
 
 /// An ordered list of text objects.
 pub type TextLines = Vec<Text>;
 /// An ordered list of text objects with a flag representing whether the last entry was of the same [`TextMode`].
 pub type SeparatedTextLines<'a> = Vec<(bool, &'a Text)>;
+
+pub fn choice_text<'de, D>(deserializer: D) -> Result<Option<Text>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let opt = Option::<Text>::deserialize(deserializer)?;
+    if let Some(text) = &opt {
+        if text.speed.is_some()
+            || text.newline.is_some()
+            || text.wait.is_some()
+            || text.sounds.is_some()
+        {
+            return Err(de::Error::custom(
+                "only fields 'text' and 'mode' are available in choice responses",
+            ));
+        }
+    }
+    Ok(opt)
+}
 
 pub type TranslationFile = ContentFile<String>;
 pub type Translations = Contents<String>;
