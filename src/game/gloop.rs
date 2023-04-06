@@ -46,7 +46,7 @@ pub fn handle_choice(
     player.choose_full(choice, None, drpc, model, stc, text_context)?;
     if let Some(ending) = &choice.ending {
         println!();
-        Text::print_lines(ending, text_context)?;
+        Text::print_lines(ending, player, text_context)?;
         return Ok(Shutdown(true));
     }
     Ok(Continue)

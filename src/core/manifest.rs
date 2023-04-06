@@ -18,8 +18,8 @@ use crate::{
 };
 
 use super::{
-    audio::{Audio, SoundAction, SoundActionMode},
-    context::TextContext,
+    audio::{SoundAction, SoundActionMode},
+    context::{StaticContext, TextContext},
     discord::{RichPresence, RichPresenceMode},
     path::PathData,
     player::{HistoryEntry, Player},
@@ -229,14 +229,13 @@ pub struct Entrypoint {
 impl Entrypoint {
     pub fn submit_sounds(
         &self,
-        audio: &Audio,
         player: &Player,
+        stc: &StaticContext,
         text_context: &TextContext,
     ) -> Result<()> {
         if let Some(sounds) = self.sounds.clone() {
-            for sound in sounds {
-                audio.accept(player, &sound.into(), &text_context)?;
-            }
+            let into: Vec<SoundAction> = sounds.into_iter().map(Into::into).collect();
+            stc.resources.submit_audio(player, &into, text_context)?;
         }
         Ok(())
     }

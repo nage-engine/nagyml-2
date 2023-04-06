@@ -203,12 +203,8 @@ impl Player {
                 self.history.pop_front();
             }
         }
-        if let Some(audio) = &stc.resources.audio {
-            if let Some(sounds) = &choice.sounds {
-                for sound in sounds {
-                    audio.accept(&self, sound, text_context)?;
-                }
-            }
+        if let Some(sounds) = &choice.sounds {
+            stc.resources.submit_audio(&self, sounds, text_context)?;
         }
         Ok(())
     }

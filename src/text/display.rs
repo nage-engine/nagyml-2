@@ -11,7 +11,7 @@ use snailshell::{snailprint_d, snailprint_s};
 use strum::{Display, EnumIter, EnumString};
 
 use crate::{
-    core::{audio::SoundActions, context::TextContext},
+    core::{audio::SoundActions, context::TextContext, player::Player},
     loading::loader::{ContentFile, Contents},
 };
 
@@ -179,12 +179,15 @@ impl Text {
     /// Formats and snailprints text based on its [`TextSpeed`].
     ///
     /// If the text object does not contain a `speed` field, defaults to the provided config settings.
-    pub fn print(&self, context: &TextContext) -> Result<()> {
+    pub fn print(&self, player: &Player, context: &TextContext) -> Result<()> {
         let speed = self
             .speed
             .as_ref()
             .unwrap_or(&context.config().settings.text.speed);
         speed.print(&self.get(context)?, context)?;
+        if let Some(sounds) = &self.sounds {
+            context.resources().submit_audio(player, sounds, context)?;
+        }
         if let &Some(wait) = &self.wait(context)? {
             std::thread::sleep(Duration::from_millis(wait));
         }
@@ -219,19 +222,19 @@ impl Text {
     }
 
     /// Formats and separates text lines and prints them sequentially.
-    pub fn print_lines(lines: &TextLines, context: &TextContext) -> Result<()> {
+    pub fn print_lines(lines: &TextLines, player: &Player, context: &TextContext) -> Result<()> {
         for (newline, line) in Self::get_separated_lines(lines, context)? {
             if newline {
                 println!();
             }
-            line.print(context)?;
+            line.print(player, context)?;
         }
         Ok(())
     }
 
     /// Calls [`Text::print_lines`] and prints a newline at the end.
-    pub fn print_lines_nl(lines: &TextLines, context: &TextContext) -> Result<()> {
-        Self::print_lines(lines, context)?;
+    pub fn print_lines_nl(lines: &TextLines, player: &Player, context: &TextContext) -> Result<()> {
+        Self::print_lines(lines, player, context)?;
         println!();
         Ok(())
     }

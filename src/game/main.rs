@@ -21,13 +21,9 @@ use super::{
 pub fn first_play_init(stc: &StaticContext, player: &mut Player) -> Result<()> {
     let text_context = text_context!(stc, player);
     if let Some(background) = &stc.config.entry.background {
-        Text::print_lines_nl(background, &text_context)?;
+        Text::print_lines_nl(background, player, &text_context)?;
     }
-    if let Some(audio) = &text_context.resources().audio {
-        stc.config
-            .entry
-            .submit_sounds(&audio, player, &text_context)?;
-    }
+    stc.config.entry.submit_sounds(player, stc, &text_context)?;
     player.began = true;
     Ok(())
 }
@@ -58,20 +54,20 @@ pub fn begin(
             return Err(anyhow!("No usable choices"));
         }
 
-        next_prompt.print(&model, entry.display, &choices, &text_context)?;
+        next_prompt.print(player, &model, entry.display, &choices, &text_context)?;
 
         match model {
             PromptModel::Redirect(choice) => {
                 player.choose_full(choice, None, drpc, &model, stc, &text_context)?
             }
             PromptModel::Ending(lines) => {
-                Text::print_lines(lines, &text_context)?;
+                Text::print_lines(lines, player, &text_context)?;
                 break 'outer true;
             }
             _ => loop {
                 let context = next_input_context(&model, &choices, &text_context)?
                     .ok_or(anyhow!("Could not resolve input context"))?;
-                // Borrow-checker coercion; only using necessary fields in static method
+
                 match take_input(
                     input,
                     &context,

@@ -15,6 +15,7 @@ use super::{
     choice::{Choice, Choices},
     context::{StaticContext, TextContext},
     path::PathData,
+    player::Player,
     state::Notes,
 };
 
@@ -151,6 +152,7 @@ impl Prompt {
     /// Prints the prompt text, if any, and the choices display, if any are responses.
     pub fn print(
         &self,
+        player: &Player,
         model: &PromptModel,
         display: bool,
         usable_choices: &Vec<&Choice>,
@@ -158,7 +160,7 @@ impl Prompt {
     ) -> Result<()> {
         if display {
             if let Some(lines) = &self.text {
-                Text::print_lines_nl(lines, text_context)?;
+                Text::print_lines_nl(lines, player, text_context)?;
             }
         }
         let result = if let PromptModel::Response = model {

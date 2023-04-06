@@ -113,7 +113,7 @@ impl SoundAction {
 /// be specified in the manifest file prior to runtime.
 pub struct Audio {
     pub players: AudioPlayers,
-    pub sounds: Sounds,
+    sounds: Sounds,
 }
 
 impl Audio {

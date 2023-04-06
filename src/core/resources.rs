@@ -8,9 +8,10 @@ use crate::{
 };
 
 use super::{
-    audio::Audio,
-    context::StaticContext,
+    audio::{Audio, SoundActions},
+    context::{StaticContext, TextContext},
     manifest::Manifest,
+    player::Player,
     prompt::{Prompt, Prompts},
     scripts::Scripts,
 };
@@ -45,5 +46,20 @@ impl Resources {
 
     pub fn lang_file(&self, lang: &str) -> Option<&TranslationFile> {
         self.translations.get(lang)
+    }
+
+    /// If the [`Audio`] resource exists, submits a collection of [`SoundActions`] to it.
+    pub fn submit_audio(
+        &self,
+        player: &Player,
+        sounds: &SoundActions,
+        text_context: &TextContext,
+    ) -> Result<()> {
+        if let Some(audio) = &self.audio {
+            for sound in sounds {
+                audio.accept(player, sound, text_context)?;
+            }
+        }
+        Ok(())
     }
 }
