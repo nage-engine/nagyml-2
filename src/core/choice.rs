@@ -33,7 +33,7 @@ pub fn default_true() -> TemplatableValue<bool> {
 ///
 /// Choices can require specific player state be present to be usable, and also modify player state.
 pub struct Choice {
-    #[serde(deserialize_with = "choice_text", skip_serializing_if = "Option::is_none")]
+    #[serde(default, deserialize_with = "choice_text", skip_serializing_if = "Option::is_none")]
     /// The response text to display, in order, when a player is presented with [`Choices`].
     /// Only required when there is more than one choice available.
     /// Mutually exclusive with `input`.
