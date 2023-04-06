@@ -116,15 +116,18 @@ impl Path {
         let result = self
             .file()
             .as_ref()
-            .map(|t| t.content.clone())
-            .unwrap_or(current_file.to_owned());
-        Some(result)
+            .and_then(|t| t.content())
+            .unwrap_or(current_file);
+        Some(result.to_owned())
     }
 
     fn static_data(&self, current_file: &str) -> Option<PathData> {
-        self.static_file(&current_file).map(|file| PathData {
-            file,
-            prompt: self.prompt().content.clone(),
+        self.static_file(&current_file).and_then(|file| {
+            let path = PathData {
+                file,
+                prompt: self.prompt().content()?.to_owned(),
+            };
+            Some(path)
         })
     }
 

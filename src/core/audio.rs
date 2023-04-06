@@ -7,20 +7,101 @@ use anyhow::{anyhow, Result};
 use playback_rs::{Player as AudioPlayer, Song};
 use result::OptionResultExt;
 use rlua::{Context, Table};
+use serde::{Deserialize, Serialize};
+use strum::{Display, EnumIter, EnumString};
 
-use crate::loading::loader::Loader;
-
-use super::{
-    choice::{SoundAction, SoundActionMode},
-    context::TextContext,
-    manifest::Manifest,
-    player::Player,
+use crate::{
+    loading::loader::Loader,
+    text::templating::{TemplatableString, TemplatableValue},
 };
+
+use super::{context::TextContext, manifest::Manifest, player::Player};
 
 /// A map of channel names to audio player instances and whether they are currently enabled.
 pub type AudioPlayers = HashMap<String, AudioPlayer>;
 /// A map of song names to decoded song content.
 pub type Sounds = BTreeMap<String, Song>;
+
+#[derive(Deserialize, Serialize, Display, Debug, Clone, EnumString, EnumIter)]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+/// A [`SoundAction`] method type.
+///
+/// Modes that require specific sound files will return `true` from [`is_specific`](SoundActionMode::is_specific).
+pub enum SoundActionMode {
+    /// Queue a sound if the channel is already playing another sound.
+    Queue,
+    /// Immediately plays a sound on the channel regardless of whether it is already playing a sound.
+    Overwrite,
+    /// Plays a sound if and only if there is no sound already playing in a channel.
+    Passive,
+    /// Skips a sound if one is playing in a channel.
+    Skip,
+    /// Pauses a channel.
+    Pause,
+    /// Un-pauses a channel.
+    Play,
+}
+
+impl Default for SoundActionMode {
+    fn default() -> Self {
+        Self::Passive
+    }
+}
+
+impl SoundActionMode {
+    /// Whether this action requires a specific sound file to be present.
+    pub fn is_specific(&self) -> bool {
+        use SoundActionMode::*;
+        matches!(&self, Queue | Overwrite | Passive)
+    }
+}
+
+#[derive(Deserialize, Serialize, Debug)]
+#[serde(deny_unknown_fields)]
+/// A container allowing choices to control audio playback through the [`Audio`] resource.
+/// Essentially a wrapper around [`playback_rs`] functionality.
+pub struct SoundAction {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// The sound file to submit.
+    /// Only required for specific [`SoundActionMode`]s.
+    pub name: Option<TemplatableString>,
+    /// The channel to modify playback on.
+    pub channel: TemplatableString,
+    #[serde(default)]
+    /// The method to apply to the sound channel.
+    pub mode: TemplatableValue<SoundActionMode>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// The specific point in a sound to start from, in milliseconds.
+    pub seek: Option<TemplatableValue<u64>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    /// The playback multiplier of the sound.
+    pub speed: Option<TemplatableValue<f64>>,
+}
+
+/// A collection of ordered [`SoundAction`]s to be submitted in order.
+pub type SoundActions = Vec<SoundAction>;
+
+impl SoundAction {
+    pub fn validate(&self, audio: &Audio) -> Result<()> {
+        if let Some(name) = &self.name {
+            if let Some(sound) = name.content() {
+                let _ = audio.get_sound(sound)?;
+            }
+        }
+        if let Some(channel) = self.channel.content() {
+            let _ = audio.get_player(channel)?;
+        }
+        if let Some(mode) = &self.mode.value {
+            if mode.is_specific() && self.name.is_none() {
+                return Err(anyhow!(
+                    "Sound action '{mode}' requires a sound effect name, but none is provided"
+                ));
+            }
+        }
+        Ok(())
+    }
+}
 
 /// A container for [`AudioPlayers`] and [`Sounds`].
 ///
@@ -76,6 +157,13 @@ impl Audio {
             .ok_or(anyhow!("Invalid sound channel '{channel}'"))
     }
 
+    /// Retrieves a [`Song`], if any, by a sound name.
+    pub fn get_sound(&self, name: &str) -> Result<&Song> {
+        self.sounds
+            .get(name)
+            .ok_or(anyhow!("Invalid sound file '{name}'"))
+    }
+
     /// Returns this controller's channel names mapped to whether they are enabled on the [`Player`].
     pub fn channel_statuses(&self, player: &Player) -> Vec<(String, bool)> {
         self.players
@@ -109,7 +197,7 @@ impl Audio {
     }
 
     /// Applies actions requiring that a specified sound file is **not** present.
-    fn accept_general_actions(player: &AudioPlayer, seek: Option<Duration>, mode: SoundActionMode) {
+    fn accept_general(player: &AudioPlayer, seek: Option<Duration>, mode: SoundActionMode) {
         use SoundActionMode::*;
         if let Some(duration) = seek {
             player.seek(duration);
@@ -123,7 +211,7 @@ impl Audio {
     }
 
     /// Applies actions requiring both a [`SoundActionMode`] and accompanying sound effect.
-    fn accept_mode(
+    fn accept_specific(
         player: &AudioPlayer,
         sfx: &Song,
         seek: Option<Duration>,
@@ -170,14 +258,11 @@ impl Audio {
         let mode = action.mode.get_value(text_context)?;
 
         match &action.name {
-            None => Self::accept_general_actions(audio_player, seek, mode),
+            None => Self::accept_general(audio_player, seek, mode),
             Some(name) => {
                 let sound = name.fill(text_context)?;
-                let sfx = self
-                    .sounds
-                    .get(&sound)
-                    .ok_or(anyhow!("Invalid sound file '{sound}'"))?;
-                Self::accept_mode(audio_player, sfx, seek, mode);
+                let sfx = self.get_sound(&sound)?;
+                Self::accept_specific(audio_player, sfx, seek, mode);
             }
         }
 

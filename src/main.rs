@@ -34,13 +34,13 @@ fn run(path: Utf8PathBuf, pick: bool, new: bool) -> Result<()> {
     let saves = SaveManager::new(&config, pick, new)?;
     let mut player = saves.load(&config)?;
     // Validate loaded resources
-    resources.validate()?;
+    let stc = StaticContext::new(&config, &resources);
+    resources.validate(&stc)?;
     // Load rich presence
     let mut drpc = config.connect_rich_presence();
     // Create input controller
     let mut input = InputController::new()?;
     // Begin game loop
-    let stc = StaticContext::new(&config, &resources);
     let silent = begin(&stc, &mut player, &saves, &mut drpc, &mut input)
         .with_context(|| crash_context(&config))?;
     // Shut down game with silence based on game loop result

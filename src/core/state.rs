@@ -267,24 +267,12 @@ impl Serialize for VariableApplications {
 }
 
 impl VariableApplications {
-    fn is_condensable(&self) -> bool {
-        for app in &self.applications {
-            if app.name.is_templatable() {
-                return false;
-            }
-        }
-        true
-    }
-
     fn into_static(&self) -> Option<StaticVariableApplications> {
-        if !self.is_condensable() {
-            return None;
-        }
         let result = self
             .applications
             .iter()
-            .map(|app| (app.name.content.clone(), app.value.clone()))
-            .collect();
+            .map(|app| Some((app.name.content()?.to_owned(), app.value.clone())))
+            .try_collect()?;
         Some(result)
     }
 }

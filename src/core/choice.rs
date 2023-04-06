@@ -6,10 +6,11 @@ use crate::text::{
 };
 
 use super::{
+    audio::SoundActions,
     context::{StaticContext, TextContext},
     path::{Path, PathData, PathLookup},
     player::HistoryEntry,
-    prompt::{Prompt, PromptModel, Prompts},
+    prompt::{Prompt, PromptModel},
     state::{
         NamedVariableEntry, NoteActions, Notes, VariableApplications, VariableEntries,
         VariableEntry, VariableInput, Variables,
@@ -19,67 +20,9 @@ use super::{
 use anyhow::{anyhow, Context, Result};
 use result::OptionResultExt;
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumIter, EnumString};
 
 pub fn default_true() -> TemplatableValue<bool> {
     TemplatableValue::value(true)
-}
-
-#[derive(Deserialize, Serialize, Display, Debug, Clone, EnumString, EnumIter)]
-#[serde(rename_all = "snake_case")]
-#[strum(serialize_all = "snake_case")]
-/// A [`SoundAction`] method type.
-///
-/// Modes that require specific sound files will return `true` from [`is_specific`](SoundActionMode::is_specific).
-pub enum SoundActionMode {
-    /// Queue a sound if the channel is already playing another sound.
-    Queue,
-    /// Immediately plays a sound on the channel regardless of whether it is already playing a sound.
-    Overwrite,
-    /// Plays a sound if and only if there is no sound already playing in a channel.
-    Passive,
-    /// Skips a sound if one is playing in a channel.
-    Skip,
-    /// Pauses a channel.
-    Pause,
-    /// Un-pauses a channel.
-    Play,
-}
-
-impl Default for SoundActionMode {
-    fn default() -> Self {
-        Self::Passive
-    }
-}
-
-impl SoundActionMode {
-    /// Whether this action requires a specific sound file to be present.
-    pub fn is_specific(&self) -> bool {
-        use SoundActionMode::*;
-        matches!(&self, Queue | Overwrite | Passive)
-    }
-}
-
-#[derive(Deserialize, Serialize, Debug)]
-#[serde(deny_unknown_fields)]
-/// A container allowing choices to control audio playback through the [`Audio`] resource.
-/// Essentially a wrapper around [`playback_rs`] functionality.
-pub struct SoundAction {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    /// The sound file to submit.
-    /// Only required for specific [`SoundActionMode`]s.
-    pub name: Option<TemplatableString>,
-    /// The channel to modify playback on.
-    pub channel: TemplatableString,
-    #[serde(default)]
-    /// The method to apply to the sound channel.
-    pub mode: TemplatableValue<SoundActionMode>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    /// The specific point in a sound to start from, in milliseconds.
-    pub seek: Option<TemplatableValue<u64>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    /// The playback multiplier of the sound.
-    pub speed: Option<TemplatableValue<f64>>,
 }
 
 #[derive(Deserialize, Serialize, Debug)]
@@ -132,7 +75,7 @@ pub struct Choice {
     pub info_pages: Option<Vec<TemplatableString>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Ordered sound actions to submit to the game's [`Audio`] resource upon using this choice.
-    pub sounds: Option<Vec<SoundAction>>,
+    pub sounds: Option<SoundActions>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Text lines to signify the ending of a game. Printed in the same way as prompt text.
     /// If this ending choice is the only one in a prompt, `response` is optional.
@@ -154,12 +97,7 @@ impl Choice {
     /// - Its `jump` section **is not templatable** and points to a valid prompt
     /// 	- The `file` key has to exist and the `prompt` key has to exist in that [`PromptFile`]
     /// - It has a `response` section if there is more than one choice in the prompt
-    pub fn validate(
-        &self,
-        local_file: &String,
-        has_company: bool,
-        prompts: &Prompts,
-    ) -> Result<()> {
+    pub fn validate(&self, local_file: &str, has_company: bool, stc: &StaticContext) -> Result<()> {
         match &self.jump {
             None => {
                 if self.ending.is_none() {
@@ -170,11 +108,13 @@ impl Choice {
             }
             Some(jump) => {
                 if let Some(file) = &jump.static_file(local_file) {
-                    let _ = Prompt::get(
-                        prompts,
-                        &PathLookup::new(&file, &jump.prompt().content).into(),
-                    )
-                    .with_context(|| "`jump` section points to invalid prompt")?;
+                    if let Some(prompt) = jump.prompt().content() {
+                        let _ = Prompt::get(
+                            &stc.resources.prompts,
+                            &PathLookup::new(&file, prompt).into(),
+                        )
+                        .with_context(|| "`jump` section points to invalid prompt")?;
+                    }
                 }
             }
         }
@@ -182,6 +122,15 @@ impl Choice {
             return Err(anyhow!(
                 "Lacks `response` section, but multiple choices are present in prompt"
             ));
+        }
+        if let Some(audio) = &stc.resources.audio {
+            if let Some(sounds) = &self.sounds {
+                for (index, sound) in sounds.iter().enumerate() {
+                    let _ = sound.validate(audio).with_context(|| {
+                        format!("Failed to validate sound action #{}", index + 1)
+                    })?;
+                }
+            }
         }
         Ok(())
     }

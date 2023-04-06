@@ -15,7 +15,7 @@ use super::display::TranslationFile;
 /// A string that is able to undergo transformations based on templating variables or custom scripts
 /// or via translation file matching.
 pub struct TemplatableString {
-    pub content: String,
+    content: String,
 }
 
 impl From<String> for TemplatableString {
@@ -42,6 +42,14 @@ impl TemplatableString {
     /// Whether this [`TemplatableString`] can be validated on load. This is `false` if the string is templatable.
     pub fn is_validatable(&self) -> bool {
         !self.is_templatable()
+    }
+
+    /// Returns the raw internal string if it [is validatable](TemplatableString::is_validatable).
+    pub fn content(&self) -> Option<&str> {
+        if self.is_validatable() {
+            return Some(&self.content);
+        }
+        None
     }
 
     /// Fills a templatable string based on the input delimiter characters and a filler function.
@@ -119,7 +127,7 @@ impl PartialEq<String> for TemplatableString {
 /// A string that can either be parsed as `T` directly or via templating it.
 pub struct TemplatableValue<T> {
     pub value: Option<T>,
-    pub template: Option<TemplatableString>,
+    template: Option<TemplatableString>,
 }
 
 impl<T> TryFrom<String> for TemplatableValue<T>

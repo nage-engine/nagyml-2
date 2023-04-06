@@ -9,6 +9,7 @@ use crate::{
 
 use super::{
     audio::Audio,
+    context::StaticContext,
     manifest::Manifest,
     prompt::{Prompt, Prompts},
     scripts::Scripts,
@@ -37,8 +38,8 @@ impl Resources {
         Ok(result)
     }
 
-    pub fn validate(&self) -> Result<()> {
-        let _ = Prompt::validate_all(&self.prompts)?;
+    pub fn validate(&self, stc: &StaticContext) -> Result<()> {
+        let _ = Prompt::validate_all(stc)?;
         Ok(())
     }
 

@@ -18,8 +18,7 @@ use crate::{
 };
 
 use super::{
-    audio::Audio,
-    choice::{SoundAction, SoundActionMode},
+    audio::{Audio, SoundAction, SoundActionMode},
     context::TextContext,
     discord::{RichPresence, RichPresenceMode},
     path::PathData,
