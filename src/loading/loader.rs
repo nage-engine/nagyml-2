@@ -107,7 +107,7 @@ impl<'a> Loader<'a> {
         Ok(result)
     }
 
-    pub fn current_dir() -> Self {
+    pub fn from_current_dir() -> Self {
         Self {
             dir: Utf8PathBuf::from("."),
             backend: Backend::Folder,

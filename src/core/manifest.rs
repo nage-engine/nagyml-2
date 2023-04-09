@@ -23,8 +23,7 @@ use super::{
     discord::{RichPresence, RichPresenceMode},
     path::PathData,
     player::{HistoryEntry, Player},
-    resources::UnlockedInfoPages,
-    state::{Notes, Variables},
+    state::{Notes, UnlockedInfoPages, Variables},
 };
 
 #[derive(Deserialize, Debug)]

@@ -17,8 +17,9 @@ use super::{
     manifest::Manifest,
     path::PathData,
     prompt::PromptModel,
-    resources::UnlockedInfoPages,
-    state::{NamedVariableEntry, NoteEntries, Notes, VariableEntries, Variables},
+    state::{
+        NamedVariableEntry, NoteEntries, Notes, UnlockedInfoPages, VariableEntries, Variables,
+    },
 };
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -86,7 +87,7 @@ impl Player {
             channels: config.settings.enabled_audio_channels(),
             notes: config.entry.notes.clone().unwrap_or(HashSet::new()),
             variables: config.entry.variables.clone().unwrap_or(HashMap::new()),
-            info_pages: config.entry.info_pages.clone().unwrap_or(HashSet::new()),
+            info_pages: config.entry.info_pages.clone().unwrap_or(Vec::new()),
             log: config.entry.log.clone().unwrap_or(Vec::new()),
             history: VecDeque::from(vec![entry]),
         }
@@ -147,6 +148,16 @@ impl Player {
         Ok(())
     }
 
+    /// Whether a specified info page ID has already been unlocked.
+    fn is_page_unlocked(&self, page: &str) -> bool {
+        for unlocked in &self.info_pages {
+            if unlocked.name == page {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /// Applies the effects of a new history entry along with choice data.
     ///
     /// The following data is applied:
@@ -178,7 +189,10 @@ impl Player {
         // Info pages are not stored in history entries, so we can fill the name here
         if let Some(pages) = &choice.info_pages {
             for page in pages {
-                self.info_pages.insert(page.fill(text_context)?);
+                let unlocked = page.to_unlocked(text_context)?;
+                if !self.is_page_unlocked(&unlocked.name) {
+                    self.info_pages.push(unlocked);
+                }
             }
         }
         Ok(())

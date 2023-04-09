@@ -12,8 +12,8 @@ use super::{
     player::HistoryEntry,
     prompt::{Prompt, PromptModel},
     state::{
-        NamedVariableEntry, NoteActions, Notes, VariableApplications, VariableEntries,
-        VariableEntry, VariableInput, Variables,
+        InfoApplications, NamedVariableEntry, NoteActions, Notes, VariableApplications,
+        VariableEntries, VariableEntry, VariableInput, Variables,
     },
 };
 
@@ -72,7 +72,7 @@ pub struct Choice {
     pub log: Option<TemplatableString>,
     #[serde(rename = "info", skip_serializing_if = "Option::is_none")]
     /// Info pages to unlock for a player upon using this choice.
-    pub info_pages: Option<Vec<TemplatableString>>,
+    pub info_pages: Option<InfoApplications>,
     #[serde(skip_serializing_if = "Option::is_none")]
     /// Ordered sound actions to submit to the game's [`Audio`] resource upon using this choice.
     pub sounds: Option<SoundActions>,

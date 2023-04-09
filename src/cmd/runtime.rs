@@ -8,8 +8,8 @@ use crate::{
         path::{PathData, PathLookup},
         player::Player,
         prompt::Prompt as PromptUtil,
-        resources::{InfoPages, Resources, UnlockedInfoPages},
-        state::Notes,
+        resources::Resources,
+        state::{InfoPages, Notes, UnlockedInfoPages},
     },
     game::gloop::GameLoopResult,
     loading::saves::SaveManager,
@@ -96,17 +96,20 @@ impl RuntimeCommand {
 
         println!();
 
+        let choices: Vec<&str> = unlocked_pages
+            .iter()
+            .map(|page| page.as_name.as_str())
+            .collect();
         let info_question = requestty::Question::select("Select an info page")
-            .choices(unlocked_pages)
+            .choices(choices)
             .build();
+
         let info_choice = requestty::prompt_one(info_question)?;
+        let page = &unlocked_pages[info_choice.as_list_item().unwrap().index];
 
         println!();
-        termimad::print_text(
-            pages
-                .get(&info_choice.as_list_item().unwrap().text)
-                .unwrap(),
-        );
+
+        termimad::print_text(pages.get(&page.name).unwrap());
 
         Ok(CommandResult::retry())
     }
