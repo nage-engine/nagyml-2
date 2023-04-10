@@ -16,7 +16,7 @@ use super::{
     context::{StaticContext, TextContext},
     path::{PathData, PathLookup},
     player::Player,
-    state::Notes,
+    state::notes::Notes,
 };
 
 #[derive(Deserialize, Serialize, Debug)]

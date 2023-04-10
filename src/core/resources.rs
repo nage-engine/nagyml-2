@@ -12,7 +12,7 @@ use super::{
     player::Player,
     prompt::{Prompt, Prompts},
     scripts::Scripts,
-    state::InfoPages,
+    state::info::InfoPages,
 };
 
 pub struct Resources {

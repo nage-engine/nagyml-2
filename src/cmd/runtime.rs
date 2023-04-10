@@ -9,7 +9,10 @@ use crate::{
         player::Player,
         prompt::Prompt as PromptUtil,
         resources::Resources,
-        state::{InfoPages, Notes, UnlockedInfoPages},
+        state::{
+            info::{InfoPages, UnlockedInfoPages},
+            notes::Notes,
+        },
     },
     game::gloop::GameLoopResult,
     loading::saves::SaveManager,

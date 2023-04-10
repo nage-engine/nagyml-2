@@ -9,7 +9,7 @@ use crate::{
         discord::RichPresence,
         player::Player,
         prompt::PromptModel,
-        state::NamedVariableEntry,
+        state::variables::NamedVariableEntry,
     },
     game::input::{InputContext, InputResult},
     loading::saves::SaveManager,

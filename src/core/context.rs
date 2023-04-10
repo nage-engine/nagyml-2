@@ -4,7 +4,7 @@ use crate::{
     core::{
         manifest::Manifest,
         resources::Resources,
-        state::{Notes, Variables},
+        state::{notes::Notes, variables::Variables},
     },
     text::display::TranslationFile,
 };

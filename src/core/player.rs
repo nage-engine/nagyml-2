@@ -18,7 +18,9 @@ use super::{
     path::PathData,
     prompt::PromptModel,
     state::{
-        NamedVariableEntry, NoteEntries, Notes, UnlockedInfoPages, VariableEntries, Variables,
+        info::UnlockedInfoPages,
+        notes::{NoteEntries, Notes},
+        variables::{NamedVariableEntry, VariableEntries, Variables},
     },
 };
 

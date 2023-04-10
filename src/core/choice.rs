@@ -12,8 +12,12 @@ use super::{
     player::HistoryEntry,
     prompt::{Prompt, PromptModel},
     state::{
-        InfoApplication, InfoApplications, NamedVariableEntry, NoteActions, Notes,
-        VariableApplications, VariableEntries, VariableEntry, VariableInput, Variables,
+        info::{InfoApplication, InfoApplications},
+        notes::{NoteActions, Notes},
+        variables::{
+            NamedVariableEntry, VariableApplications, VariableEntries, VariableEntry,
+            VariableInput, Variables,
+        },
     },
 };
 
