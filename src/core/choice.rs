@@ -234,7 +234,7 @@ impl Choice {
             }
             if let Some(once) = &actions.once {
                 let once = once.fill(text_context)?;
-                return Ok((notes.contains(&once), Some(once)));
+                return Ok((!notes.contains(&once), Some(once)));
             }
         }
         Ok((true, None))
