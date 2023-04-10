@@ -11,8 +11,8 @@ use serde::{Deserialize, Serialize};
 use strum::{Display, EnumIter, EnumString};
 
 use crate::{
+    core::text::templating::{TemplatableString, TemplatableValue},
     loading::loader::Loader,
-    text::templating::{TemplatableString, TemplatableValue},
 };
 
 use super::{context::TextContext, manifest::Manifest, player::Player};

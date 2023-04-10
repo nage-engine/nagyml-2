@@ -13,10 +13,10 @@ use crate::{
             info::{InfoPages, UnlockedInfoPages},
             notes::Notes,
         },
+        text::display::Translations,
     },
     game::gloop::GameLoopResult,
     loading::saves::SaveManager,
-    text::display::Translations,
 };
 
 #[derive(Parser, Debug, PartialEq)]

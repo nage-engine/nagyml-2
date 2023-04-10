@@ -7,8 +7,8 @@ use serde::{
     Deserialize, Serialize,
 };
 
-use crate::{
-    core::context::TextContext,
+use crate::core::{
+    context::TextContext,
     text::templating::{TemplatableString, TemplatableValue},
 };
 

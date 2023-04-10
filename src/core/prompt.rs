@@ -4,11 +4,11 @@ use anyhow::{anyhow, Context, Result};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    loading::loader::{ContentFile, Contents},
-    text::{
+    core::text::{
         display::{Text, TextLines},
         templating::TemplatableString,
     },
+    loading::loader::{ContentFile, Contents},
 };
 
 use super::{

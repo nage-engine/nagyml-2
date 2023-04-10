@@ -1,9 +1,6 @@
 use anyhow::Result;
 
-use crate::{
-    loading::loader::Loader,
-    text::display::{TranslationFile, Translations},
-};
+use crate::loading::loader::Loader;
 
 use super::{
     audio::{Audio, SoundActions},
@@ -13,6 +10,7 @@ use super::{
     prompt::{Prompt, Prompts},
     scripts::Scripts,
     state::info::InfoPages,
+    text::display::{TranslationFile, Translations},
 };
 
 pub struct Resources {

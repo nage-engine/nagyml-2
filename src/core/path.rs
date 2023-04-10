@@ -7,7 +7,7 @@ use serde::{
     Deserialize, Deserializer, Serialize,
 };
 
-use crate::text::templating::TemplatableString;
+use crate::core::text::templating::TemplatableString;
 
 use super::context::TextContext;
 

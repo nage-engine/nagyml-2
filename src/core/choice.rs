@@ -1,10 +1,5 @@
 use std::collections::HashMap;
 
-use crate::text::{
-    display::{choice_text, Text, TextLines},
-    templating::{TemplatableString, TemplatableValue},
-};
-
 use super::{
     audio::{SoundAction, SoundActions},
     context::{StaticContext, TextContext},
@@ -18,6 +13,10 @@ use super::{
             NamedVariableEntry, VariableApplications, VariableEntries, VariableEntry,
             VariableInput, Variables,
         },
+    },
+    text::{
+        display::{choice_text, Text, TextLines},
+        templating::{TemplatableString, TemplatableValue},
     },
 };
 

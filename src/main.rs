@@ -17,7 +17,6 @@ mod cmd;
 mod core;
 mod game;
 mod loading;
-mod text;
 
 pub const NAGE_VERSION: &str = env!("CARGO_PKG_VERSION");
 

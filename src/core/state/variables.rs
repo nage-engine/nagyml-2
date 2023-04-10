@@ -9,7 +9,7 @@ use serde::{
     Deserialize, Serialize,
 };
 
-use crate::{core::context::TextContext, text::templating::TemplatableString};
+use crate::core::{context::TextContext, text::templating::TemplatableString};
 
 #[derive(Deserialize, Serialize, Debug)]
 #[serde(deny_unknown_fields)]

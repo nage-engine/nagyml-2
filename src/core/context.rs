@@ -1,11 +1,9 @@
 use rlua::{Context, Table};
 
-use crate::{
-    core::{
-        manifest::Manifest,
-        resources::Resources,
-        state::{notes::Notes, variables::Variables},
-    },
+use crate::core::{
+    manifest::Manifest,
+    resources::Resources,
+    state::{notes::Notes, variables::Variables},
     text::display::TranslationFile,
 };
 

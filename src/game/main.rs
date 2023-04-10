@@ -7,9 +7,9 @@ use crate::{
         manifest::Manifest,
         player::Player,
         prompt::{Prompt, PromptModel},
+        text::display::Text,
     },
     loading::saves::SaveManager,
-    text::display::Text,
     text_context,
 };
 

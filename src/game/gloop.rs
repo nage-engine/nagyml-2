@@ -10,10 +10,10 @@ use crate::{
         player::Player,
         prompt::PromptModel,
         state::variables::NamedVariableEntry,
+        text::display::Text,
     },
     game::input::{InputContext, InputResult},
     loading::saves::SaveManager,
-    text::display::Text,
 };
 
 use super::input::InputController;

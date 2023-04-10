@@ -9,11 +9,11 @@ use semver::{Version, VersionReq};
 use serde::Deserialize;
 
 use crate::{
-    loading::loader::Loader,
-    text::{
+    core::text::{
         display::{TextLines, TextSpeed},
         templating::{TemplatableString, TemplatableValue},
     },
+    loading::loader::Loader,
     NAGE_VERSION,
 };
 
