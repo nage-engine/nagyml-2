@@ -14,7 +14,7 @@ use crate::{
 use super::{
     choice::{Choice, Choices},
     context::{StaticContext, TextContext},
-    path::PathData,
+    path::{PathData, PathLookup},
     player::Player,
     state::Notes,
 };
@@ -90,28 +90,31 @@ impl Prompt {
     }
 
     /// Validates this prompt's choices using [`Choice::validate`].
-    pub fn validate(&self, name: &str, file: &str, stc: &StaticContext) -> Result<()> {
+    pub fn validate(&self, file: &str, stc: &StaticContext) -> Result<()> {
         let has_company = self.choices.len() > 1;
         // Validate all independent choices
-        self.choices
-            .iter()
-            .enumerate()
-            .map(|(index, choice)| {
-                choice.validate(file, has_company, stc).with_context(|| {
-                    format!(
-                        "Failed to validate choice #{} of prompt '{name}' in file '{file}'",
-                        index + 1
-                    )
-                })
-            })
-            .collect()
+        for (index, choice) in self.choices.iter().enumerate() {
+            choice
+                .validate(file, has_company, stc)
+                .with_context(|| format!("Failed to validate choice #{}", index + 1))?;
+        }
+        // Validate text objects' sound keys, if any
+        if let Some(audio) = &stc.resources.audio {
+            if let Some(lines) = &self.text {
+                Text::validate_all(lines, audio)?;
+            }
+        }
+        Ok(())
     }
 
     /// Validates all prompts in a [`Prompts`] map.
     pub fn validate_all(stc: &StaticContext) -> Result<()> {
         for (file_name, prompt_file) in &stc.resources.prompts {
             for (name, prompt) in prompt_file {
-                let _ = prompt.validate(name, file_name, stc)?;
+                let path: PathData = PathLookup::new(&file_name, &name).into();
+                prompt
+                    .validate(file_name, stc)
+                    .with_context(|| format!("Failed to validate prompt {path}"))?;
             }
         }
         Ok(())

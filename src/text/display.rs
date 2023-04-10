@@ -3,7 +3,7 @@ use std::{
     time::Duration,
 };
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use crossterm::style::Stylize;
 use result::OptionResultExt;
 use serde::{de, Deserialize, Deserializer, Serialize};
@@ -11,7 +11,11 @@ use snailshell::{snailprint_d, snailprint_s};
 use strum::{Display, EnumIter, EnumString};
 
 use crate::{
-    core::{audio::SoundActions, context::TextContext, player::Player},
+    core::{
+        audio::{Audio, SoundAction, SoundActions},
+        context::TextContext,
+        player::Player,
+    },
     loading::loader::{ContentFile, Contents},
 };
 
@@ -236,6 +240,18 @@ impl Text {
     pub fn print_lines_nl(lines: &TextLines, player: &Player, context: &TextContext) -> Result<()> {
         Self::print_lines(lines, player, context)?;
         println!();
+        Ok(())
+    }
+
+    /// Validates a list of [`TextLines`] in order.
+    /// Delegates validation to [`SoundAction::validate_all`] if sounds are present.
+    pub fn validate_all(lines: &TextLines, audio: &Audio) -> Result<()> {
+        for (index, line) in lines.iter().enumerate() {
+            if let Some(sounds) = &line.sounds {
+                SoundAction::validate_all(sounds, audio)
+                    .with_context(|| format!("Failed to validate text object #{}", index + 1))?;
+            }
+        }
         Ok(())
     }
 }

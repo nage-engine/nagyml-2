@@ -3,7 +3,7 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context as _, Result};
 use playback_rs::{Player as AudioPlayer, Song};
 use result::OptionResultExt;
 use rlua::{Context, Table};
@@ -83,6 +83,12 @@ pub struct SoundAction {
 pub type SoundActions = Vec<SoundAction>;
 
 impl SoundAction {
+    /// Validates a single [`SoundAction`] against the [`Audio`] resource.
+    ///
+    /// A sound action is valid if:
+    /// - Its `name` key matches a loaded sound effect
+    /// - Its `channel` key matches a created audio channel
+    /// - The [specificity](SoundActionMode::is_specific) of its `mode` matches whether the sound effect is present
     pub fn validate(&self, audio: &Audio) -> Result<()> {
         if let Some(name) = &self.name {
             if let Some(sound) = name.content() {
@@ -97,7 +103,21 @@ impl SoundAction {
                 return Err(anyhow!(
                     "Sound action '{mode}' requires a sound effect name, but none is provided"
                 ));
+            } else if !mode.is_specific() && self.name.is_some() {
+                return Err(anyhow!(
+                    "Sound action '{mode}' does not use a sound effect, but one is provided"
+                ));
             }
+        }
+        Ok(())
+    }
+
+    /// Validates a list of [`SoundActions`] in order using [`SoundAction::validate`].
+    pub fn validate_all(sounds: &SoundActions, audio: &Audio) -> Result<()> {
+        for (index, sound) in sounds.iter().enumerate() {
+            let _ = sound
+                .validate(audio)
+                .with_context(|| format!("Failed to validate sound action #{}", index + 1))?;
         }
         Ok(())
     }

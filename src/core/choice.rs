@@ -6,7 +6,7 @@ use crate::text::{
 };
 
 use super::{
-    audio::SoundActions,
+    audio::{SoundAction, SoundActions},
     context::{StaticContext, TextContext},
     path::{Path, PathData, PathLookup},
     player::HistoryEntry,
@@ -125,11 +125,7 @@ impl Choice {
         }
         if let Some(audio) = &stc.resources.audio {
             if let Some(sounds) = &self.sounds {
-                for (index, sound) in sounds.iter().enumerate() {
-                    let _ = sound.validate(audio).with_context(|| {
-                        format!("Failed to validate sound action #{}", index + 1)
-                    })?;
-                }
+                SoundAction::validate_all(sounds, audio)?;
             }
         }
         Ok(())
