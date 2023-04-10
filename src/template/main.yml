@@ -4,5 +4,4 @@ main:
   choices:
   - response: 
       text: Replace me too!
-    jump:
-      prompt: main
+    jump: main

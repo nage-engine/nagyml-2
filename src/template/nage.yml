@@ -11,7 +11,8 @@ settings:
   debug: true
   history:
     size: 15
-  lang: en_us
+  text:
+    lang: en_us
 
 entry:
   path:
