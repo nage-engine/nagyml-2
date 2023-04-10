@@ -35,8 +35,11 @@ pub enum CliCommand {
     },
     #[command(about = "Build a prompt from the command line")]
     Builder,
-    #[command(about = "Open the save directory")]
-    Saves,
+    #[command(about = "Open a game's save directory")]
+    Saves {
+        #[arg(help = "The game ID. Attempts to default to current directory")]
+        path: Option<Utf8PathBuf>,
+    },
 }
 
 impl CliCommand {
@@ -93,14 +96,19 @@ impl CliCommand {
         Ok(())
     }
 
-    /// Handles a [`Saves`](CliCommand::Saves) command.
-    fn saves() -> Result<()> {
-        let loader = Loader::from_current_dir();
+    /// Handles a [`Data`](CliCommand::Saves) command.
+    fn saves(path: &Option<Utf8PathBuf>) -> Result<()> {
+        let loader = Loader::from_dir_or_current(path.clone());
         match Manifest::load(&loader) {
-            Ok(config) => open::that(SaveManager::game_dir(&config)?)
-                .with_context(|| anyhow!("Unable to open game save directory"))?,
-            Err(_) => open::that(SaveManager::generic_dir()?)
-                .with_context(|| anyhow!("Unable to open global save directory"))?,
+            Ok(config) => {
+                open::that(SaveManager::game_dir(&config)?)?;
+            }
+            Err(_) => {
+                if let Some(dir) = path {
+                    return Err(anyhow!("Game ID '{dir}' does not exist"));
+                }
+                open::that(SaveManager::generic_dir()?)?;
+            }
         };
         Ok(())
     }
@@ -110,7 +118,9 @@ impl CliCommand {
         match self {
             &New { full } => Self::new(full),
             Builder => Self::builder(),
-            Saves => Self::saves(),
+            Saves { path } => {
+                Self::saves(path).with_context(|| anyhow!("Failed to open saves directory"))
+            }
             _ => unreachable!(),
         }
     }

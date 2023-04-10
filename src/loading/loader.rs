@@ -107,11 +107,19 @@ impl<'a> Loader<'a> {
         Ok(result)
     }
 
-    pub fn from_current_dir() -> Self {
+    pub fn dir_or_current(dir: Option<Utf8PathBuf>) -> Utf8PathBuf {
+        dir.unwrap_or(Utf8PathBuf::from("."))
+    }
+
+    pub fn from_dir(dir: Utf8PathBuf) -> Self {
         Self {
-            dir: Utf8PathBuf::from("."),
+            dir,
             backend: Backend::Folder,
         }
+    }
+
+    pub fn from_dir_or_current(dir: Option<Utf8PathBuf>) -> Self {
+        Self::from_dir(Self::dir_or_current(dir))
     }
 
     pub fn config_dir() -> Result<Utf8PathBuf> {

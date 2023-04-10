@@ -60,7 +60,7 @@ fn main() -> Result<()> {
     // otherwise, uses its own method
     let command = CliCommand::parse();
     if let CliCommand::Run { path, pick, new } = command {
-        return run(path.unwrap_or(Utf8PathBuf::from(".")), pick, new);
+        return run(Loader::dir_or_current(path), pick, new);
     }
     command.run()
 }
