@@ -1,6 +1,6 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
-use anyhow::Result;
+use anyhow::{anyhow, Context, Result};
 use result::OptionResultExt;
 use serde::{
     de::{
@@ -356,6 +356,23 @@ impl InfoApplication {
                 .unwrap_or(name),
         };
         Ok(result)
+    }
+
+    fn validate(&self, pages: &InfoPages) -> Result<()> {
+        if let Some(page) = self.info.name.content() {
+            if !pages.contains_key(page) {
+                return Err(anyhow!("Invalid info page '{page}'"));
+            }
+        }
+        Ok(())
+    }
+
+    pub fn validate_all(apps: &InfoApplications, pages: &InfoPages) -> Result<()> {
+        for (index, app) in apps.iter().enumerate() {
+            app.validate(pages)
+                .with_context(|| format!("Failed to validate info application #{}", index + 1))?;
+        }
+        Ok(())
     }
 }
 

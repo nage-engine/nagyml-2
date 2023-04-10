@@ -72,9 +72,9 @@ impl Dependencies {
             .map(|nage| {
                 if !nage.matches(&nage_version) {
                     Err(anyhow!(
-					"dependency `nage` does not match required version (required: {}, provided: {})", 
-					nage, NAGE_VERSION
-				))
+                        "Dependency `nage` does not match required version (required: {}, provided: {})", 
+                        nage, NAGE_VERSION
+                    ))
                 } else {
                     Ok(())
                 }

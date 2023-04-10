@@ -12,8 +12,8 @@ use super::{
     player::HistoryEntry,
     prompt::{Prompt, PromptModel},
     state::{
-        InfoApplications, NamedVariableEntry, NoteActions, Notes, VariableApplications,
-        VariableEntries, VariableEntry, VariableInput, Variables,
+        InfoApplication, InfoApplications, NamedVariableEntry, NoteActions, Notes,
+        VariableApplications, VariableEntries, VariableEntry, VariableInput, Variables,
     },
 };
 
@@ -47,10 +47,7 @@ pub struct Choice {
     /// A container to prompt player input to save to a variable.
     /// There can only be one choice in an input prompt. It also has its own prompt model: [`Input`](PromptModel::Input).
     pub input: Option<VariableInput>,
-    #[serde(
-        skip_serializing_if = "Option::is_none",
-        //deserialize_with = "crate::core::path::deserialize"
-    )]
+    #[serde(skip_serializing_if = "Option::is_none")]
     /// The prompt to jump to after the choice is made and state is modified.
     /// Mutually exclusive with `ending`.
     pub jump: Option<Path>,
@@ -122,6 +119,12 @@ impl Choice {
             return Err(anyhow!(
                 "Lacks `response` section, but multiple choices are present in prompt"
             ));
+        }
+        if self.response.is_some() && self.input.is_some() {
+            return Err(anyhow!("'response' and 'input' are mutually exclusive"));
+        }
+        if let Some(apps) = &self.info_pages {
+            InfoApplication::validate_all(apps, &stc.resources.info_pages)?;
         }
         if let Some(audio) = &stc.resources.audio {
             if let Some(sounds) = &self.sounds {
