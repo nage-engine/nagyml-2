@@ -209,9 +209,15 @@ impl Player {
         text_context: &TextContext,
     ) -> Result<()> {
         let latest = self.latest_entry()?;
-        if let Some(result) =
-            choice.to_history_entry(&latest, input, &self.variables, model, stc, text_context)
-        {
+        if let Some(result) = choice.value.to_history_entry(
+            &latest,
+            input,
+            &self.variables,
+            model,
+            choice.once.clone(),
+            stc,
+            text_context,
+        ) {
             let entry = result?;
             self.apply_entry(&entry, choice.value, text_context)?;
             self.history.push_back(entry);
