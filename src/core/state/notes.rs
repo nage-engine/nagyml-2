@@ -124,7 +124,11 @@ pub struct NoteActions {
 
 impl NoteActions {
     /// Creates a list of [`NoteEntries`] from the note actions' [`apply`](NoteAction::apply) and [`once`](NoteAction::once) fields.
-    pub fn to_note_entries(&self, text_context: &TextContext) -> Result<NoteEntries> {
+    pub fn to_note_entries(
+        &self,
+        once: Option<String>,
+        text_context: &TextContext,
+    ) -> Result<NoteEntries> {
         let mut entries: NoteEntries = self
             .apply
             .as_ref()
@@ -136,8 +140,8 @@ impl NoteActions {
             .invert()?
             .unwrap_or(Vec::new());
 
-        if let Some(once) = &self.once {
-            entries.push(NoteEntry::new(once, false, text_context)?);
+        if let Some(once_value) = once {
+            entries.push(NoteEntry::new(once_value, false));
         }
         Ok(entries)
     }
@@ -155,15 +159,11 @@ pub struct NoteEntry {
 pub type NoteEntries = Vec<NoteEntry>;
 
 impl NoteEntry {
-    pub fn new(name: &TemplatableString, take: bool, text_context: &TextContext) -> Result<Self> {
-        let entry = NoteEntry {
-            value: name.fill(text_context)?,
-            take,
-        };
-        Ok(entry)
+    pub fn new(value: String, take: bool) -> Self {
+        NoteEntry { value, take }
     }
 
     pub fn from_application(app: &NoteStateContents, text_context: &TextContext) -> Result<Self> {
-        Self::new(&app.name, !app.get_state(text_context)?, text_context)
+        Ok(Self::new(app.name.fill(text_context)?, !app.get_state(text_context)?))
     }
 }

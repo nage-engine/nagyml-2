@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 
 use crate::{
     core::{
+        choice::UsableChoice,
         context::{StaticContext, TextContext},
         discord::RichPresence,
         manifest::Manifest,
@@ -57,9 +58,14 @@ pub fn begin(
         next_prompt.print(player, &model, entry.display, &choices, &text_context)?;
 
         match model {
-            PromptModel::Redirect(choice) => {
-                player.choose_full(choice, None, drpc, &model, stc, &text_context)?
-            }
+            PromptModel::Redirect(choice) => player.choose_full(
+                &UsableChoice::new(choice, None),
+                None,
+                drpc,
+                &model,
+                stc,
+                &text_context,
+            )?,
             PromptModel::Ending(lines) => {
                 Text::print_lines(lines, player, &text_context)?;
                 break 'outer true;

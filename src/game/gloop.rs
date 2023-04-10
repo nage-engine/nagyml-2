@@ -4,7 +4,7 @@ use result::OptionResultExt;
 use crate::{
     cmd::runtime::{CommandResult, RuntimeCommand},
     core::{
-        choice::Choice,
+        choice::UsableChoice,
         context::{StaticContext, TextContext},
         discord::RichPresence,
         player::Player,
@@ -35,7 +35,7 @@ pub fn handle_quit(shutdown: bool) -> GameLoopResult {
 }
 
 pub fn handle_choice(
-    choice: &Choice,
+    choice: &UsableChoice,
     player: &mut Player,
     drpc: &mut Option<RichPresence>,
     model: &PromptModel,
@@ -44,7 +44,7 @@ pub fn handle_choice(
 ) -> Result<GameLoopResult> {
     use GameLoopResult::*;
     player.choose_full(choice, None, drpc, model, stc, text_context)?;
-    if let Some(ending) = &choice.ending {
+    if let Some(ending) = &choice.value.ending {
         println!();
         Text::print_lines(ending, player, text_context)?;
         return Ok(Shutdown(true));
@@ -81,7 +81,7 @@ pub fn take_input(
     saves: &SaveManager,
     drpc: &mut Option<RichPresence>,
     model: &PromptModel,
-    choices: &Vec<&Choice>,
+    choices: &Vec<UsableChoice>,
     stc: &StaticContext,
     text_context: &TextContext,
 ) -> Result<GameLoopResult> {
@@ -94,14 +94,14 @@ pub fn take_input(
         Ok(result) => match result {
             InputResult::Quit(shutdown) => handle_quit(shutdown),
             InputResult::Choice(i) => {
-                handle_choice(choices[i - 1], player, drpc, model, stc, text_context)?
+                handle_choice(&choices[i - 1], player, drpc, model, stc, text_context)?
             }
             InputResult::Variable { name, value } => {
                 // Modify variables after the choose call since history entries are sensitive to this order
                 let entry = NamedVariableEntry::new(name.clone(), value.clone(), &player.variables);
-                player.choose(choices[0], Some(entry), model, stc, text_context)?;
+                player.choose(&choices[0], Some(entry), model, stc, text_context)?;
                 player.variables.insert(name, value);
-                player.after_choice(choices[0], stc, drpc)?;
+                player.after_choice(choices[0].value, stc, drpc)?;
                 Continue
             }
             InputResult::Command(parse) => handle_command(parse, player, saves, stc, text_context)?,
@@ -112,7 +112,7 @@ pub fn take_input(
 
 pub fn next_input_context(
     model: &PromptModel,
-    choices: &Vec<&Choice>,
+    choices: &Vec<UsableChoice>,
     text_context: &TextContext,
 ) -> Result<Option<InputContext>> {
     use PromptModel::*;

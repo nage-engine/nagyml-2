@@ -11,7 +11,7 @@ use unicode_truncate::UnicodeTruncateStr;
 use crate::text_context;
 
 use super::{
-    choice::Choice,
+    choice::{Choice, UsableChoice},
     context::{StaticContext, TextContext},
     discord::RichPresence,
     manifest::Manifest,
@@ -202,7 +202,7 @@ impl Player {
 
     pub fn choose(
         &mut self,
-        choice: &Choice,
+        choice: &UsableChoice,
         input: Option<NamedVariableEntry>,
         model: &PromptModel,
         stc: &StaticContext,
@@ -213,13 +213,13 @@ impl Player {
             choice.to_history_entry(&latest, input, &self.variables, model, stc, text_context)
         {
             let entry = result?;
-            self.apply_entry(&entry, choice, text_context)?;
+            self.apply_entry(&entry, choice.value, text_context)?;
             self.history.push_back(entry);
             if self.history.len() > stc.config.settings.history.size {
                 self.history.pop_front();
             }
         }
-        if let Some(sounds) = &choice.sounds {
+        if let Some(sounds) = &choice.value.sounds {
             stc.resources.submit_audio(&self, sounds, text_context)?;
         }
         Ok(())
@@ -261,7 +261,7 @@ impl Player {
 
     pub fn choose_full(
         &mut self,
-        choice: &Choice,
+        choice: &UsableChoice,
         input: Option<NamedVariableEntry>,
         drpc: &mut Option<RichPresence>,
         model: &PromptModel,
@@ -269,7 +269,7 @@ impl Player {
         text_context: &TextContext,
     ) -> Result<()> {
         self.choose(choice, input, model, stc, text_context)?;
-        self.after_choice(choice, stc, drpc)
+        self.after_choice(choice.value, stc, drpc)
     }
 
     /// Returns the player's log entries split into readable chunks of five entries maximum.

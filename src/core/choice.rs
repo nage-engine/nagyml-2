@@ -89,6 +89,81 @@ pub struct Choice {
 /// A list of ordered [`Choice`]s.
 pub type Choices = Vec<Choice>;
 
+/// A reference to a choice that has been checked against for player use.
+/// Additionally contains the `once` state for this check, if any.
+pub struct UsableChoice<'a> {
+    pub value: &'a Choice,
+    pub once: Option<String>,
+}
+
+impl<'a> UsableChoice<'a> {
+    pub fn new(value: &'a Choice, once: Option<String>) -> Self {
+        Self { value, once }
+    }
+
+    /// Creates a map of variable entries to use when creating a new [`HistoryEntry`].
+    ///
+    /// If both the input result and this choice's `variables` key are [`None`], returns none.
+    /// Otherwise, returns a combined map based on which inputs are present.
+    pub fn create_variable_entries(
+        &self,
+        input: Option<NamedVariableEntry>,
+        variables: &Variables,
+        text_context: &TextContext,
+    ) -> Result<Option<VariableEntries>> {
+        let var_entries = self
+            .value
+            .variables
+            .as_ref()
+            .map(|vars| VariableEntry::from_map(&vars, variables, text_context))
+            .invert()?;
+        if input.is_none() && var_entries.is_none() {
+            return Ok(None);
+        }
+        let mut entries = var_entries.unwrap_or(HashMap::new());
+        if let Some(named) = input {
+            entries.insert(named.name, named.entry);
+        }
+        Ok(Some(entries))
+    }
+
+    /// Constructs a [`HistoryEntry`] based on this choice object.
+    ///
+    /// Copies over control flags, the path based on the latest history entry, and notes and variable applications.
+    pub fn to_history_entry(
+        &self,
+        latest: &HistoryEntry,
+        input: Option<NamedVariableEntry>,
+        variables: &Variables,
+        model: &PromptModel,
+        stc: &StaticContext,
+        text_context: &TextContext,
+    ) -> Option<Result<HistoryEntry>> {
+        self.value.jump.as_ref().map(|jump| {
+            Ok(HistoryEntry {
+                path: jump.fill(&latest.path, text_context)?,
+                display: self.value.display.get_value(text_context)?,
+                locked: self
+                    .value
+                    .lock
+                    .as_ref()
+                    .map(|lock| lock.get_value(text_context))
+                    .invert()?
+                    .unwrap_or(stc.config.settings.history.locked),
+                redirect: matches!(model, PromptModel::Redirect(_)),
+                notes: self
+                    .value
+                    .notes
+                    .as_ref()
+                    .map(|n| n.to_note_entries(self.once.clone(), text_context))
+                    .invert()?,
+                variables: self.create_variable_entries(input, variables, text_context)?,
+                log: self.value.log.is_some(),
+            })
+        })
+    }
+}
+
 impl Choice {
     /// Validates a choice amongst the global prompt context.
     ///
@@ -137,88 +212,32 @@ impl Choice {
         Ok(())
     }
 
-    /// Creates a map of variable entries to use when creating a new [`HistoryEntry`].
-    ///
-    /// If both the input result and this choice's `variables` key are [`None`], returns none.
-    /// Otherwise, returns a combined map based on which inputs are present.
-    pub fn create_variable_entries(
-        &self,
-        input: Option<NamedVariableEntry>,
-        variables: &Variables,
-        text_context: &TextContext,
-    ) -> Result<Option<VariableEntries>> {
-        let var_entries = self
-            .variables
-            .as_ref()
-            .map(|vars| VariableEntry::from_map(&vars, variables, text_context))
-            .invert()?;
-        if input.is_none() && var_entries.is_none() {
-            return Ok(None);
-        }
-        let mut entries = var_entries.unwrap_or(HashMap::new());
-        if let Some(named) = input {
-            entries.insert(named.name, named.entry);
-        }
-        Ok(Some(entries))
-    }
-
-    /// Constructs a [`HistoryEntry`] based on this choice object.
-    ///
-    /// Copies over control flags, the path based on the latest history entry, and notes and variable applications.
-    pub fn to_history_entry(
-        &self,
-        latest: &HistoryEntry,
-        input: Option<NamedVariableEntry>,
-        variables: &Variables,
-        model: &PromptModel,
-        stc: &StaticContext,
-        text_context: &TextContext,
-    ) -> Option<Result<HistoryEntry>> {
-        self.jump.as_ref().map(|jump| {
-            Ok(HistoryEntry {
-                path: jump.fill(&latest.path, text_context)?,
-                display: self.display.get_value(text_context)?,
-                locked: self
-                    .lock
-                    .as_ref()
-                    .map(|lock| lock.get_value(text_context))
-                    .invert()?
-                    .unwrap_or(stc.config.settings.history.locked),
-                redirect: matches!(model, PromptModel::Redirect(_)),
-                notes: self
-                    .notes
-                    .as_ref()
-                    .map(|n| n.to_note_entries(text_context))
-                    .invert()?,
-                variables: self.create_variable_entries(input, variables, text_context)?,
-                log: self.log.is_some(),
-            })
-        })
-    }
-
     /// Determines if a player can use this choice.
     ///
     /// This check passes if:
     /// - All note requirement `has` fields match the state of the provided [`Notes`] object, and
     /// - The notes object does not contain the `once` value, if any is present
-    pub fn can_player_use(&self, notes: &Notes, text_context: &TextContext) -> Result<bool> {
+    pub fn can_player_use(
+        &self,
+        notes: &Notes,
+        text_context: &TextContext,
+    ) -> Result<(bool, Option<String>)> {
         if let Some(actions) = &self.notes {
             if let Some(require) = &actions.require {
                 for requirement in require {
                     if requirement.state.get_state(text_context)?
                         != notes.contains(&requirement.state.name.fill(text_context)?)
                     {
-                        return Ok(false);
+                        return Ok((false, None));
                     }
                 }
             }
             if let Some(once) = &actions.once {
-                if notes.contains(&once.fill(text_context)?) {
-                    return Ok(false);
-                }
+                let once = once.fill(text_context)?;
+                return Ok((notes.contains(&once), Some(once)));
             }
         }
-        Ok(true)
+        Ok((true, None))
     }
 
     /// Fills in and formats tag content, if any.
@@ -246,12 +265,12 @@ impl Choice {
     }
 
     /// Constructs a [`String`] of ordered choice responses.
-    pub fn display(choices: &Vec<&Choice>, text_context: &TextContext) -> Result<String> {
+    pub fn display(choices: &Vec<UsableChoice>, text_context: &TextContext) -> Result<String> {
         let result = choices
             .iter()
             .enumerate()
-            .filter(|(_, choice)| choice.response.is_some())
-            .map(|(index, choice)| choice.response_line(index + 1, text_context))
+            .filter(|(_, choice)| choice.value.response.is_some())
+            .map(|(index, choice)| choice.value.response_line(index + 1, text_context))
             .try_collect::<Vec<String>>()?
             .join("\n");
         Ok(result)
