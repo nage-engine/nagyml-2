@@ -184,14 +184,14 @@ impl Text {
     ///
     /// If the text object does not contain a `speed` field, defaults to the provided config settings.
     pub fn print(&self, player: &Player, context: &TextContext) -> Result<()> {
+        if let Some(sounds) = &self.sounds {
+            context.resources().submit_audio(player, sounds, context)?;
+        }
         let speed = self
             .speed
             .as_ref()
             .unwrap_or(&context.config().settings.text.speed);
         speed.print(&self.get(context)?, context)?;
-        if let Some(sounds) = &self.sounds {
-            context.resources().submit_audio(player, sounds, context)?;
-        }
         if let &Some(wait) = &self.wait(context)? {
             std::thread::sleep(Duration::from_millis(wait));
         }
