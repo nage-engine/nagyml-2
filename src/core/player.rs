@@ -11,7 +11,7 @@ use unicode_truncate::UnicodeTruncateStr;
 use crate::text_context;
 
 use super::{
-    choice::{Choice, UsableChoice},
+    choice::Choice,
     context::{StaticContext, TextContext},
     discord::RichPresence,
     manifest::Manifest,
@@ -202,30 +202,25 @@ impl Player {
 
     pub fn choose(
         &mut self,
-        choice: &UsableChoice,
+        choice: &Choice,
+        once: &Option<String>,
         input: Option<NamedVariableEntry>,
         model: &PromptModel,
         stc: &StaticContext,
         text_context: &TextContext,
     ) -> Result<()> {
         let latest = self.latest_entry()?;
-        if let Some(result) = choice.value.to_history_entry(
-            &latest,
-            input,
-            &self.variables,
-            model,
-            choice.once.clone(),
-            stc,
-            text_context,
-        ) {
+        if let Some(result) =
+            choice.to_history_entry(&latest, input, &self.variables, model, once, stc, text_context)
+        {
             let entry = result?;
-            self.apply_entry(&entry, choice.value, text_context)?;
+            self.apply_entry(&entry, choice, text_context)?;
             self.history.push_back(entry);
             if self.history.len() > stc.config.settings.history.size {
                 self.history.pop_front();
             }
         }
-        if let Some(sounds) = &choice.value.sounds {
+        if let Some(sounds) = &choice.sounds {
             stc.resources.submit_audio(&self, sounds, text_context)?;
         }
         Ok(())
@@ -267,15 +262,16 @@ impl Player {
 
     pub fn choose_full(
         &mut self,
-        choice: &UsableChoice,
+        choice: &Choice,
+        once: &Option<String>,
         input: Option<NamedVariableEntry>,
         drpc: &mut Option<RichPresence>,
         model: &PromptModel,
         stc: &StaticContext,
         text_context: &TextContext,
     ) -> Result<()> {
-        self.choose(choice, input, model, stc, text_context)?;
-        self.after_choice(choice.value, stc, drpc)
+        self.choose(choice, once, input, model, stc, text_context)?;
+        self.after_choice(choice, stc, drpc)
     }
 
     /// Returns the player's log entries split into readable chunks of five entries maximum.

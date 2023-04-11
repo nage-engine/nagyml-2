@@ -126,7 +126,7 @@ impl NoteActions {
     /// Creates a list of [`NoteEntries`] from the note actions' [`apply`](NoteAction::apply) and [`once`](NoteAction::once) fields.
     pub fn to_note_entries(
         &self,
-        once: Option<String>,
+        once: &Option<String>,
         text_context: &TextContext,
     ) -> Result<NoteEntries> {
         let mut entries: NoteEntries = self
@@ -141,7 +141,7 @@ impl NoteActions {
             .unwrap_or(Vec::new());
 
         if let Some(once_value) = once {
-            entries.push(NoteEntry::new(once_value, false));
+            entries.push(NoteEntry::new(once_value.clone(), false));
         }
         Ok(entries)
     }

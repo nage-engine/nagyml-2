@@ -12,7 +12,7 @@ use crate::{
 };
 
 use super::{
-    choice::{Choice, Choices, UsableChoice},
+    choice::{Choice, Choices, UsableChoices},
     context::{StaticContext, TextContext},
     path::{PathData, PathLookup},
     player::Player,
@@ -142,12 +142,12 @@ impl Prompt {
         &self,
         notes: &Notes,
         text_context: &TextContext,
-    ) -> Result<Vec<UsableChoice>> {
+    ) -> Result<UsableChoices> {
         let mut result = Vec::new();
         for choice in &self.choices {
             let (usable, once) = choice.can_player_use(notes, text_context)?;
             if usable {
-                result.push(UsableChoice::new(choice, once))
+                result.push((choice, once))
             }
         }
         Ok(result)
@@ -159,7 +159,7 @@ impl Prompt {
         player: &Player,
         model: &PromptModel,
         display: bool,
-        usable_choices: &Vec<UsableChoice>,
+        usable_choices: &Vec<&Choice>,
         text_context: &TextContext,
     ) -> Result<()> {
         if display {

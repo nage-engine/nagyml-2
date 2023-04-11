@@ -89,18 +89,7 @@ pub struct Choice {
 /// A list of ordered [`Choice`]s.
 pub type Choices = Vec<Choice>;
 
-/// A reference to a choice that has been checked against for player use.
-/// Additionally contains the `once` state for this check, if any.
-pub struct UsableChoice<'a> {
-    pub value: &'a Choice,
-    pub once: Option<String>,
-}
-
-impl<'a> UsableChoice<'a> {
-    pub fn new(value: &'a Choice, once: Option<String>) -> Self {
-        Self { value, once }
-    }
-}
+pub type UsableChoices<'a> = Vec<(&'a Choice, Option<String>)>;
 
 impl Choice {
     /// Validates a choice amongst the global prompt context.
@@ -184,7 +173,7 @@ impl Choice {
         input: Option<NamedVariableEntry>,
         variables: &Variables,
         model: &PromptModel,
-        once: Option<String>,
+        once: &Option<String>,
         stc: &StaticContext,
         text_context: &TextContext,
     ) -> Option<Result<HistoryEntry>> {
@@ -221,22 +210,28 @@ impl Choice {
         notes: &Notes,
         text_context: &TextContext,
     ) -> Result<(bool, Option<String>)> {
-        if let Some(actions) = &self.notes {
-            if let Some(require) = &actions.require {
-                for requirement in require {
-                    if requirement.state.get_state(text_context)?
-                        != notes.contains(&requirement.state.name.fill(text_context)?)
-                    {
-                        return Ok((false, None));
+        let once = 'outer: {
+            if let Some(actions) = &self.notes {
+                if let Some(require) = &actions.require {
+                    for requirement in require {
+                        if requirement.state.get_state(text_context)?
+                            != notes.contains(&requirement.state.name.fill(text_context)?)
+                        {
+                            return Ok((false, None));
+                        }
                     }
                 }
+                if let Some(once) = &actions.once {
+                    let once = once.fill(text_context)?;
+                    if notes.contains(&once) {
+                        return Ok((false, None));
+                    }
+                    break 'outer Some(once);
+                }
             }
-            if let Some(once) = &actions.once {
-                let once = once.fill(text_context)?;
-                return Ok((!notes.contains(&once), Some(once)));
-            }
-        }
-        Ok((true, None))
+            None
+        };
+        Ok((true, once))
     }
 
     /// Fills in and formats tag content, if any.
@@ -264,12 +259,12 @@ impl Choice {
     }
 
     /// Constructs a [`String`] of ordered choice responses.
-    pub fn display(choices: &Vec<UsableChoice>, text_context: &TextContext) -> Result<String> {
+    pub fn display(choices: &Vec<&Choice>, text_context: &TextContext) -> Result<String> {
         let result = choices
             .iter()
             .enumerate()
-            .filter(|(_, choice)| choice.value.response.is_some())
-            .map(|(index, choice)| choice.value.response_line(index + 1, text_context))
+            .filter(|(_, choice)| choice.response.is_some())
+            .map(|(index, choice)| choice.response_line(index + 1, text_context))
             .try_collect::<Vec<String>>()?
             .join("\n");
         Ok(result)
