@@ -138,7 +138,7 @@ impl<'a> Loader<'a> {
         use Backend::*;
         match &self.backend {
             Folder => self.dir.join(path),
-            Zip(_, _) => Utf8PathBuf::from(self.dir.file_stem().unwrap()).join(path),
+            Zip(_, _) => path.as_ref().to_path_buf(),
         }
     }
 
